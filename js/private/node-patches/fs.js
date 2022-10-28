@@ -119,6 +119,21 @@ const patcher = (fs = _fs, roots) => {
     const origRealpathSync = fs.realpathSync.bind(fs);
     const origRealpathSyncNative = fs.realpathSync.native;
     const isEscape = (0, exports.escapeFunction)(roots);
+    // A small set of root directories which are known to have no parent "hops"
+    const HOP_ROOTS = Object.freeze(Object.assign(
+    // An object with no proto so only the keys below are set (no "hasOwnProperty" key etc)
+    Object.create(null), 
+    // Root dirs
+    {
+        '': true,
+        '/': true,
+        '.': true,
+    }, 
+    // The patch root directories
+    roots.reduce((c, p) => {
+        c[p] = true;
+        return c;
+    }, {})));
     // =========================================================================
     // fs.lstat
     // =========================================================================
@@ -526,10 +541,9 @@ const patcher = (fs = _fs, roots) => {
                     }
                     nested.push(path.basename(maybe));
                     const dirname = path.dirname(maybe);
-                    if (!dirname ||
-                        dirname == maybe ||
-                        dirname == '.' ||
-                        dirname == '/') {
+                    if (dirname == maybe ||
+                        HOP_ROOTS[dirname] ||
+                        HOP_ROOTS[maybe]) {
                         // not a link
                         return cb(escapedHop);
                     }
@@ -546,10 +560,9 @@ const patcher = (fs = _fs, roots) => {
                     }
                     nested.push(path.basename(maybe));
                     const dirname = path.dirname(maybe);
-                    if (!dirname ||
-                        dirname == maybe ||
-                        dirname == '.' ||
-                        dirname == '/') {
+                    if (dirname == maybe ||
+                        HOP_ROOTS[dirname] ||
+                        HOP_ROOTS[maybe]) {
                         // not a link
                         return cb(escapedHop);
                     }
@@ -571,10 +584,8 @@ const patcher = (fs = _fs, roots) => {
         function _tryParent() {
             nested.push(path.basename(maybe));
             const dirname = path.dirname(maybe);
-            if (!dirname ||
-                dirname == maybe ||
-                dirname == '.' ||
-                dirname == '/') {
+            // TODO: also look for paths that are not within any 'roots'
+            if (dirname == maybe || HOP_ROOTS[dirname] || HOP_ROOTS[maybe]) {
                 // not a link
                 return false;
             }
@@ -582,6 +593,7 @@ const patcher = (fs = _fs, roots) => {
             return true;
         }
         for (;;) {
+            // TODO: cache anything within 'roots'
             try {
                 readlink = origReadlinkSync(maybe);
                 if (!path.isAbsolute(readlink)) {
