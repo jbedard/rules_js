@@ -667,7 +667,10 @@ describe('testing realpath', async () => {
                 const patchedFs = Object.assign({}, fs)
                 patchedFs.promises = Object.assign({}, fs.promises)
 
-                patcher(patchedFs, [path.join(fixturesDir, 'sandbox')])
+                patcher(patchedFs, [
+                    path.join(fixturesDir, 'sandbox'),
+                    path.join(fixturesDir, 'execroot'),
+                ])
                 const linkPath = path.join(
                     fixturesDir,
                     'sandbox',

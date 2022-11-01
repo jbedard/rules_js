@@ -634,6 +634,20 @@ export const patcher = (fs: any = _fs, roots: string[]) => {
         oneHop(loc, cb)
     }
 
+    function isWithinRoot(p: string) {
+        // return !HOP_ROOTS[p];
+
+        // TODO: ensure slashes?
+        for (const root of roots) {
+            if (p.startsWith(root)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    const HOPS = Object.create(null)
+
     function nextHopSync(loc: string): string | false {
         let readlink: string
         let nested: string[] = []
@@ -643,13 +657,19 @@ export const patcher = (fs: any = _fs, roots: string[]) => {
             nested.push(path.basename(maybe))
             const dirname = path.dirname(maybe)
             // TODO: also look for paths that are not within any 'roots'
-            if (dirname == maybe || HOP_ROOTS[dirname] || HOP_ROOTS[maybe]) {
+            if (dirname == maybe || !isWithinRoot(dirname)) {
                 // not a link
                 return false
             }
             maybe = dirname
             return true
         }
+
+        // if (HOPS[loc]) {
+        //     console.log("CACHED: ", loc, " => ", HOPS[loc])
+        //     return HOPS[loc];
+        // }
+
         for (;;) {
             // TODO: cache anything within 'roots'
             try {
@@ -673,7 +693,7 @@ export const patcher = (fs: any = _fs, roots: string[]) => {
             }
 
             if (!_tryParent()) {
-                return escapedHop
+                return (HOPS[loc] = escapedHop)
             }
         }
     }
