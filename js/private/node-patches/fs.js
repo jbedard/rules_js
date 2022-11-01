@@ -600,26 +600,21 @@ const patcher = (fs = _fs, roots) => {
                     readlink = path.resolve(path.dirname(maybe), readlink);
                 }
                 readlink = path.join(readlink, ...nested.reverse());
-                if (isEscape(loc, readlink)) {
-                    if (!escapedHop) {
-                        escapedHop = readlink;
-                    }
-                    if (!_tryParent()) {
-                        return escapedHop;
-                    }
-                    continue;
+                if (!isEscape(loc, readlink)) {
+                    return readlink;
                 }
-                return readlink;
+                if (!escapedHop) {
+                    escapedHop = readlink;
+                }
             }
             catch (err) {
                 if (err.code === 'ENOENT') {
                     // file does not exist
                     return undefined;
                 }
-                if (!_tryParent()) {
-                    return escapedHop;
-                }
-                continue;
+            }
+            if (!_tryParent()) {
+                return escapedHop;
             }
         }
     }
