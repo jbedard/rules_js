@@ -517,15 +517,10 @@ const patcher = (fs = _fs, roots) => {
         }
         let link;
         try {
-            if (origLstatSync(p).isSymbolicLink()) {
-                link = origReadlinkSync(p);
-                if (link) {
-                    if (!path.isAbsolute(link)) {
-                        link = path.resolve(path.dirname(p), link);
-                    }
-                }
-                else {
-                    link = HOP_NON_LINK;
+            link = origReadlinkSync(p);
+            if (link) {
+                if (!path.isAbsolute(link)) {
+                    link = path.resolve(path.dirname(p), link);
                 }
             }
             else {
