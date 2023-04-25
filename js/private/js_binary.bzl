@@ -32,6 +32,8 @@ based on the requested target platform. Use the
 [`--toolchain_resolution_debug`](https://docs.bazel.build/versions/main/command-line-reference.html#flag--toolchain_resolution_debug)
 Bazel option to see more detail about the selection.
 
+The `js_binary` `args` attribute is a list of strings that will be passed as arguments to node.js.
+
 This rules requires that Bazel was run with
 [`--enable_runfiles`](https://docs.bazel.build/versions/main/command-line-reference.html#flag--enable_runfiles). 
 """
