@@ -1,0 +1,28 @@
+lockfileVersion: '6.0'
+
+importers:
+
+  .:
+    devDependencies:
+      npm-aliases-test:
+        specifier: workspace:*
+        version: link:lib
+
+  lib:
+    dependencies:
+      '@aspect-test/c':
+        specifier: 2.0.0
+        version: registry.npmjs.org/@aspect-test/c@2.0.0
+      '@aspect-test/c-alias':
+        specifier: npm:@aspect-test/c@2.0.0
+        version: registry.npmjs.org/@aspect-test/c@2.0.0
+
+packages:
+
+  registry.npmjs.org/@aspect-test/c@2.0.0:
+    resolution: {integrity: sha512-vRuHi/8zxZ+IRGdgdX4VoMNFZrR9UqO87yQx61IGIkjgV7QcKUeu5jfvIE3Mr0WNQeMdO1JpyTx1UUpsE73iug==, registry: https://registry.yarnpkg.com/, tarball: https://registry.npmjs.org/@aspect-test/c/-/c-2.0.0.tgz}
+    name: '@aspect-test/c'
+    version: 2.0.0
+    hasBin: true
+    requiresBuild: true
+    dev: false
