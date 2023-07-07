@@ -243,6 +243,10 @@ def _init_root_package(priv, rctx, label_store):
 
 ################################################################################
 def _init_npmrc(priv, rctx, label_store):
+    print("""
+NPMRC: init
+""")
+
     if not label_store.has("npmrc"):
         # check for a .npmrc next to the pnpm-lock.yaml file
         _maybe_npmrc(priv, rctx, label_store, "sibling_npmrc")
@@ -476,8 +480,18 @@ def _load_npmrc(priv, rctx, npmrc_path):
     priv["npm_registries"] = dicts.add(priv["npm_registries"], registries)
     priv["npm_auth"] = dicts.add(priv["npm_auth"], auth)
 
+    print("""
+NPMRC: loaded {f} with:
+registries: {a}
+auth: {b}
+""".format(f = npmrc_path, a = registries, b = auth))
+
 ################################################################################
 def _load_home_npmrc(priv, rctx):
+    print("""
+NPMRC: TRY HOME
+""")
+
     home_directory = utils.home_directory(rctx)
     if not home_directory:
         # buildifier: disable=print

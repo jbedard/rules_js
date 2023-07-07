@@ -448,6 +448,10 @@ def _download_and_extract_archive(rctx):
     if auth_count > 1:
         fail("expected only one of 'npm_auth', `npm_auth_basic` or 'npm_auth_username' and 'npm_auth_password' to be set")
 
+    print("""
+DOWNLOAD: %s (%s) @ %s with %s
+""" % (_TARBALL_FILENAME, rctx.attr.integrity, download_url, auth))
+
     rctx.download(
         output = _TARBALL_FILENAME,
         url = download_url,
