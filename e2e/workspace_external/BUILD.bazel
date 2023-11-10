@@ -1,0 +1,11 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@wrapper_workspace//:defs.bzl", "wrapper_macro")
+
+wrapper_macro(
+    name = "wrapper",
+)
+
+build_test(
+    name = "wrapper_test",
+    targets = [":wrapper"],
+)

@@ -1,0 +1,25 @@
+local_repository(
+    name = "wrapper_workspace",
+    path = "../wrapper_workspace",
+)
+
+load("@wrapper_workspace//:repositories.bzl", "wrapper_workspace_dependencies")
+
+wrapper_workspace_dependencies()
+
+# TODO: We never directly use any of the below. Should not be required?
+load("@aspect_rules_js//js:repositories.bzl", "rules_js_dependencies")
+
+rules_js_dependencies()
+
+load("@rules_nodejs//nodejs:repositories.bzl", "DEFAULT_NODE_VERSION", "nodejs_register_toolchains")
+
+nodejs_register_toolchains(
+    name = "nodejs",
+    node_version = DEFAULT_NODE_VERSION,
+)
+
+# TODO: Should not be required
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
