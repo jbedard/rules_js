@@ -6,34 +6,15 @@ load("@aspect_rules_js//npm/private:npm_link_package_store.bzl", _npm_link_packa
 load("@aspect_rules_js//npm/private:npm_package_store.bzl", _npm_package_store = "npm_package_store")
 load("@@npm__at_aspect-test_c__registry.npmjs.org_at_aspect-test_c_2.0.0__links//:defs.bzl", link_0 = "npm_link_imported_package_store", store_0 = "npm_imported_package_store")
 
+# buildifier: disable=function-docstring
 def npm_link_all_packages(name = "node_modules", imported_links = []):
-    """Generated list of npm_link_package() target generators and first-party linked packages corresponding to the packages in @//:pnpm-lock.yaml
-
-    Args:
-        name: name of catch all target to generate for all packages linked
-        imported_links: optional list link functions from manually imported packages
-            that were fetched with npm_import rules,
-
-            For example,
-
-            ```
-            load("@npm//:defs.bzl", "npm_link_all_packages")
-            load("@npm_meaning-of-life__links//:defs.bzl", npm_link_meaning_of_life = "npm_link_imported_package")
-
-            npm_link_all_packages(
-                name = "node_modules",
-                imported_links = [
-                    npm_link_meaning_of_life,
-                ],
-            )```
-    """
-
     root_package = ""
     link_packages = ["", "lib"]
-    is_root = native.package_name() == root_package
-    link = native.package_name() in link_packages
+    bazel_package = native.package_name()
+    is_root = bazel_package == root_package
+    link = bazel_package in link_packages
     if not is_root and not link:
-        msg = "The npm_link_all_packages() macro loaded from @npm//:defs.bzl and called in bazel package '%s' may only be called in bazel packages that correspond to the pnpm root package '' and pnpm workspace projects '', 'lib'" % native.package_name()
+        msg = "The npm_link_all_packages() macro loaded from @npm//:defs.bzl and called in bazel package '%s' may only be called in bazel packages that correspond to the pnpm root package or pnpm workspace projects. Projects are discovered from the pnpm-lock.yaml and may be missing if the lockfile is out of date. Root package: '', pnpm workspace projects: '', 'lib'" % native.package_name()
         fail(msg)
     link_targets = []
     scope_targets = {}
@@ -48,9 +29,11 @@ def npm_link_all_packages(name = "node_modules", imported_links = []):
         store_0(name = "{}/@aspect-test/c".format(name))
     if link:
         if native.package_name() == "lib":
-            link_targets.append(link_0(name = "{}/@aspect-test/c".format(name)))
+            link_0(name = "{}/@aspect-test/c".format(name))
+            link_targets.append("//{}:{}/@aspect-test/c".format(bazel_package, name))
             scope_targets["@aspect-test"] = scope_targets["@aspect-test"] + [link_targets[-1]] if "@aspect-test" in scope_targets else [link_targets[-1]]
-            link_targets.append(link_0(name = "{}/@aspect-test/c-alias".format(name)))
+            link_0(name = "{}/@aspect-test/c-alias".format(name))
+            link_targets.append("//{}:{}/@aspect-test/c-alias".format(bazel_package, name))
             scope_targets["@aspect-test"] = scope_targets["@aspect-test"] + [link_targets[-1]] if "@aspect-test" in scope_targets else [link_targets[-1]]
 
     if is_root:
@@ -66,7 +49,7 @@ def npm_link_all_packages(name = "node_modules", imported_links = []):
             visibility = ["//visibility:public"],
             tags = ["manual"],
             use_declare_symlink = select({
-                "@aspect_rules_js//js/private:experimental_allow_unresolved_symlinks": True,
+                "@aspect_rules_js//js:allow_unresolved_symlinks": True,
                 "//conditions:default": False,
             }),
         )
@@ -80,11 +63,10 @@ def npm_link_all_packages(name = "node_modules", imported_links = []):
                 visibility = ["//visibility:public"],
                 tags = ["manual"],
                 use_declare_symlink = select({
-                    "@aspect_rules_js//js/private:experimental_allow_unresolved_symlinks": True,
+                    "@aspect_rules_js//js:allow_unresolved_symlinks": True,
                     "//conditions:default": False,
                 }),
             )
-            link_targets.append(":{}/npm-aliases-test".format(name))
 
             # filegroup target that provides a single file which is
             # package directory for use in $(execpath) and $(rootpath)
@@ -95,6 +77,7 @@ def npm_link_all_packages(name = "node_modules", imported_links = []):
                 visibility = ["//visibility:public"],
                 tags = ["manual"],
             )
+            link_targets.append(":{}/npm-aliases-test".format(name))
 
     for scope, scoped_targets in scope_targets.items():
         _js_library(
@@ -111,20 +94,8 @@ def npm_link_all_packages(name = "node_modules", imported_links = []):
         visibility = ["//visibility:public"],
     )
 
+# buildifier: disable=function-docstring
 def npm_link_targets(name = "node_modules", package = None):
-    """Generated list of target names that are linked by npm_link_all_packages()
-
-    Args:
-        name: name of catch all target to generate for all packages linked
-        package: Bazel package to generate targets names for.
-
-            Set to an empty string "" to specify the root package.
-
-            If unspecified, the current package (`native.package_name()`) is used.
-
-    Returns:
-        A list of target names that are linked by npm_link_all_packages()
-    """
     link_packages = ["", "lib"]
     bazel_package = package if package != None else native.package_name()
     link = bazel_package in link_packages

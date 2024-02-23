@@ -2,9 +2,9 @@
 
 load("@aspect_rules_js//npm:repositories.bzl", "npm_import")
 
+# Generated npm_import repository rules corresponding to npm packages in //:pnpm-lock.yaml
+# buildifier: disable=function-docstring
 def npm_repositories():
-    "Generated npm_import repository rules corresponding to npm packages in //:pnpm-lock.yaml"
-
     npm_import(
         name = "npm__at_aspect-test_c__registry.npmjs.org_at_aspect-test_c_2.0.0",
         root_package = "",
@@ -15,6 +15,7 @@ def npm_repositories():
         package = "@aspect-test/c",
         version = "registry.npmjs.org/@aspect-test/c@2.0.0",
         url = "https://registry.yarnpkg.com/@aspect-test/c/-/c-2.0.0.tgz",
+        package_visibility = ["//visibility:public"],
         npm_translate_lock_repo = "npm",
         integrity = "sha512-vRuHi/8zxZ+IRGdgdX4VoMNFZrR9UqO87yQx61IGIkjgV7QcKUeu5jfvIE3Mr0WNQeMdO1JpyTx1UUpsE73iug==",
         transitive_closure = {
