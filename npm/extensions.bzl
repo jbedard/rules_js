@@ -2,6 +2,7 @@
 See https://bazel.build/docs/bzlmod#extension-definition
 """
 
+load("@aspect_bazel_lib//lib:repo_utils.bzl", "repo_utils")
 load("@bazel_features//:features.bzl", "bazel_features")
 load("//npm:repositories.bzl", "npm_import", "pnpm_repository", _LATEST_PNPM_VERSION = "LATEST_PNPM_VERSION")
 load("//npm/private:npm_translate_lock.bzl", "npm_translate_lock", "npm_translate_lock_lib")
