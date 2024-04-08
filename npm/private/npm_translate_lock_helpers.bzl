@@ -448,7 +448,7 @@ ERROR: patch_args for package {package} contains a strip prefix that is incompat
             lifecycle_hooks = lifecycle_hooks,
             lifecycle_hooks_env = lifecycle_hooks_env,
             lifecycle_hooks_execution_requirements = lifecycle_hooks_execution_requirements,
-            lifecycle_hooks_use_default_shell_env = lifecycle_hooks_use_default_shell_env[0] == "true",
+            lifecycle_hooks_use_default_shell_env = lifecycle_hooks_use_default_shell_env and lifecycle_hooks_use_default_shell_env[0] == "true",
             npm_auth = npm_auth_bearer,
             npm_auth_basic = npm_auth_basic,
             npm_auth_username = npm_auth_username,

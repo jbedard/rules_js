@@ -5,7 +5,7 @@ See https://bazel.build/docs/bzlmod#extension-definition
 load("@bazel_features//:features.bzl", "bazel_features")
 load("@aspect_bazel_lib//lib:repo_utils.bzl", "repo_utils")
 load("//npm:repositories.bzl", "npm_import", "pnpm_repository", _LATEST_PNPM_VERSION = "LATEST_PNPM_VERSION")
-load("//npm/private:npm_translate_lock.bzl", "npm_translate_lock", "npm_translate_lock_lib")
+load("//npm/private:npm_translate_lock.bzl", "npm_translate_lock_lib", "npm_translate_lock_rule")
 load("//npm/private:npm_translate_lock_helpers.bzl", npm_translate_lock_helpers = "helpers")
 load("//npm/private:npm_translate_lock_macro_helpers.bzl", macro_helpers = "helpers")
 load("//npm/private:npm_import.bzl", "npm_import_lib", "npm_import_links_lib")
@@ -35,7 +35,7 @@ def _npm_extension_impl(module_ctx):
     return module_ctx.extension_metadata()
 
 def _npm_translate_lock_bzlmod(attr):
-    npm_translate_lock(
+    npm_translate_lock_rule(
         name = attr.name,
         bins = attr.bins,
         custom_postinstalls = attr.custom_postinstalls,
@@ -43,12 +43,6 @@ def _npm_translate_lock_bzlmod(attr):
         dev = attr.dev,
         external_repository_action_cache = attr.external_repository_action_cache,
         generate_bzl_library_targets = attr.generate_bzl_library_targets,
-        lifecycle_hooks = attr.lifecycle_hooks,
-        lifecycle_hooks_envs = attr.lifecycle_hooks_envs,
-        lifecycle_hooks_execution_requirements = attr.lifecycle_hooks_execution_requirements,
-        lifecycle_hooks_exclude = attr.lifecycle_hooks_exclude,
-        lifecycle_hooks_no_sandbox = attr.lifecycle_hooks_no_sandbox,
-        lifecycle_hooks_use_default_shell_env = attr.lifecycle_hooks_use_default_shell_env,
         link_workspace = attr.link_workspace,
         no_optional = attr.no_optional,
         npmrc = attr.npmrc,
@@ -65,7 +59,6 @@ def _npm_translate_lock_bzlmod(attr):
         quiet = attr.quiet,
         replace_packages = attr.replace_packages,
         root_package = attr.root_package,
-        run_lifecycle_hooks = attr.run_lifecycle_hooks,
         update_pnpm_lock = attr.update_pnpm_lock,
         use_home_npmrc = attr.use_home_npmrc,
         verify_node_modules_ignored = attr.verify_node_modules_ignored,
