@@ -45,7 +45,6 @@ DEFAULT_DEFS_BZL_FILENAME = "defs.bzl"
 _ATTRS = {
     "additional_file_contents": attr.string_list_dict(),
     "bins": attr.string_list_dict(),
-    "bzlmod": attr.bool(),
     "custom_postinstalls": attr.string_dict(),
     "data": attr.label_list(),
     "defs_bzl_filename": attr.string(default = DEFAULT_DEFS_BZL_FILENAME),
@@ -83,27 +82,23 @@ _ATTRS = {
     "yq_toolchain_prefix": attr.string(default = "yq"),
 }
 
-npm_translate_lock_lib = struct(
-    attrs = _ATTRS,
-)
-
 ################################################################################
-def _npm_translate_lock_impl(rctx):
+def _npm_translate_lock_impl(rctx, rctx_name, attr, bzlmod, bzlmod_npm_import_lambda = None):
     rctx.report_progress("Initializing")
 
-    state = npm_translate_lock_state.new(rctx)
+    state = npm_translate_lock_state.new(rctx, rctx_name, attr)
 
     # If a pnpm lock file has not been specified then we need to bootstrap by running `pnpm
     # import` in the user's repository
-    if not rctx.attr.pnpm_lock:
-        _bootstrap_import(rctx, state)
+    if not attr.pnpm_lock:
+        _bootstrap_import(rctx, rctx_name, state)
 
     if state.should_update_pnpm_lock():
         # Run `pnpm install --lockfile-only` or `pnpm import` if its inputs have changed since last update
         if state.action_cache_miss():
-            _fail_if_frozen_pnpm_lock(rctx, state)
-            if _update_pnpm_lock(rctx, state):
-                if rctx.attr.bzlmod:
+            _fail_if_frozen_pnpm_lock(rctx, rctx_name, state)
+            if _update_pnpm_lock(rctx, rctx_name, state):
+                if bzlmod:
                     msg = """
 
 INFO: {} file updated. Please run your build again.
@@ -115,24 +110,26 @@ See https://github.com/aspect-build/rules_js/issues/1445
                     # If the pnpm lock file was changed then reload it before translation
                     state.reload_lockfile()
 
-    helpers.verify_node_modules_ignored(rctx, state.importers(), state.root_package())
+    helpers.verify_node_modules_ignored(rctx, attr, state.importers(), state.root_package())
 
-    helpers.verify_patches(rctx, state)
+    helpers.verify_patches(rctx, attr, state)
 
     rctx.report_progress("Translating {}".format(state.label_store.relative_path("pnpm_lock")))
 
     importers, packages = translate_to_transitive_closure(
         state.importers(),
         state.packages(),
-        rctx.attr.prod,
-        rctx.attr.dev,
-        rctx.attr.no_optional,
+        attr.prod,
+        attr.dev,
+        attr.no_optional,
     )
 
     rctx.report_progress("Generating starlark for npm dependencies")
 
     generate_repository_files(
         rctx,
+        rctx_name,
+        attr,
         state.label_store.label("pnpm_lock"),
         importers,
         packages,
@@ -142,10 +139,22 @@ See https://github.com/aspect-build/rules_js/issues/1445
         state.npm_registries(),
         state.npm_auth(),
         state.link_workspace(),
+        bzlmod,
+        bzlmod_npm_import_lambda,
     )
 
+def _npm_translate_lock_rule_impl(rctx):
+    _npm_translate_lock_impl(rctx, rctx.name, rctx.attr, False, None)
+
+npm_translate_lock_lib = struct(
+    attrs = _ATTRS,
+)
+def npm_translate_lock_rule_extension(rctx, rctx_name, attr, bzlmod_npm_import_lambda):
+    _npm_translate_lock_impl(rctx, rctx_name, attr, True, bzlmod_npm_import_lambda)
+
+
 npm_translate_lock_rule = repository_rule(
-    implementation = _npm_translate_lock_impl,
+    implementation = _npm_translate_lock_rule_impl,
     attrs = _ATTRS,
 )
 
@@ -632,7 +641,6 @@ def npm_translate_lock(
         yq_toolchain_prefix = yq_toolchain_prefix,
         npm_package_target_name = npm_package_target_name,
         use_starlark_yaml_parser = use_starlark_yaml_parser,
-        bzlmod = False,
     )
 
 def list_patches(name, out = None, include_patterns = ["*.diff", "*.patch"], exclude_patterns = []):
@@ -666,7 +674,7 @@ def list_patches(name, out = None, include_patterns = ["*.diff", "*.patch"], exc
     )
 
 ################################################################################
-def _bootstrap_import(rctx, state):
+def _bootstrap_import(rctx, rctx_name, state):
     pnpm_lock_label = state.label_store.label("pnpm_lock")
     pnpm_lock_path = state.label_store.path("pnpm_lock")
 
@@ -677,7 +685,7 @@ def _bootstrap_import(rctx, state):
         print("""
 WARNING: Implicitly using pnpm-lock.yaml file `{pnpm_lock}` that is expected to be the result of running `pnpm import` on the `{lock}` lock file.
          Set the `pnpm_lock` attribute of `npm_translate_lock(name = "{rctx_name}")` to `{pnpm_lock}` suppress this warning.
-""".format(pnpm_lock = pnpm_lock_label, lock = state.label_store.label("lock"), rctx_name = rctx.name))
+""".format(pnpm_lock = pnpm_lock_label, lock = state.label_store.label("lock"), rctx_name = rctx_name))
         return
 
     # No pnpm lock file exists and the user has specified a yarn or npm lock file. Bootstrap
@@ -693,7 +701,7 @@ WARNING: Implicitly using pnpm-lock.yaml file `{pnpm_lock}` that is expected to 
 INFO: Running initial `pnpm import` in `{wd}` to bootstrap the pnpm-lock.yaml file required by rules_js.
       It is recommended that you check the generated pnpm-lock.yaml file into source control and add it to the pnpm_lock
       attribute of `npm_translate_lock(name = "{rctx_name}")` so subsequent invocations of the repository
-      rule do not need to run `pnpm import` unless an input has changed.""".format(wd = bootstrap_working_directory, rctx_name = rctx.name))
+      rule do not need to run `pnpm import` unless an input has changed.""".format(wd = bootstrap_working_directory, rctx_name = rctx_name))
 
     rctx.report_progress("Bootstrapping pnpm-lock.yaml file with `pnpm import`")
 
@@ -728,13 +736,13 @@ ERROR: Running `pnpm import` did not generate the {path} file.
 INFO: Initial pnpm-lock.yaml file generated. Please add the generated pnpm-lock.yaml file into
       source control and set the `pnpm_lock` attribute in `npm_translate_lock(name = "{rctx_name}")` to `{pnpm_lock}`
       and then run your build again.""".format(
-        rctx_name = rctx.name,
+        rctx_name = rctx_name,
         pnpm_lock = pnpm_lock_label,
     )
     fail(msg)
 
 ################################################################################
-def _execute_preupdate_scripts(rctx, state):
+def _execute_preupdate_scripts(rctx, rctx_name, state):
     for i in range(len(rctx.attr.preupdate)):
         script_key = "preupdate_{}".format(i)
 
@@ -765,7 +773,7 @@ STDERR:
 {stderr}
 """.format(
                 script = state.label_store.relative_path(script_key),
-                rctx_name = rctx.name,
+                rctx_name = rctx_name,
                 status = result.return_code,
                 stderr = result.stderr,
                 stdout = result.stdout,
@@ -773,8 +781,8 @@ STDERR:
             fail(msg)
 
 ################################################################################
-def _update_pnpm_lock(rctx, state):
-    _execute_preupdate_scripts(rctx, state)
+def _update_pnpm_lock(rctx, rctx_name, state):
+    _execute_preupdate_scripts(rctx, rctx_name, state)
 
     pnpm_lock_label = state.label_store.label("pnpm_lock")
     pnpm_lock_relative_path = state.label_store.relative_path("pnpm_lock")
@@ -793,7 +801,7 @@ INFO: Updating `{pnpm_lock}` file as its inputs have changed since the last upda
             pnpm_lock = pnpm_lock_relative_path,
             pnpm_cmd = pnpm_cmd,
             wd = update_working_directory,
-            rctx_name = rctx.name,
+            rctx_name = rctx_name,
         ))
 
     rctx.report_progress("Updating pnpm-lock.yaml with `pnpm {pnpm_cmd}`".format(pnpm_cmd = pnpm_cmd))
@@ -828,7 +836,7 @@ STDERR:
 {stderr}
 """.format(
             cmd = " ".join(update_cmd),
-            rctx_name = rctx.name,
+            rctx_name = rctx_name,
             status = result.return_code,
             stderr = result.stderr,
             stdout = result.stdout,
@@ -853,7 +861,7 @@ INFO: {} file has changed""".format(pnpm_lock_relative_path))
     return lockfile_changed
 
 ################################################################################
-def _fail_if_frozen_pnpm_lock(rctx, state):
+def _fail_if_frozen_pnpm_lock(rctx, rctx_name, state):
     if RULES_JS_FROZEN_PNPM_LOCK_ENV in rctx.os.environ.keys() and rctx.os.environ[RULES_JS_FROZEN_PNPM_LOCK_ENV]:
         fail("""
 
@@ -864,5 +872,5 @@ ERROR: `{action_cache}` is out of date. `{pnpm_lock}` may require an update. To 
 """.format(
             action_cache = state.label_store.relative_path("action_cache"),
             pnpm_lock = state.label_store.relative_path("pnpm_lock"),
-            rctx_name = rctx.name,
+            rctx_name = rctx_name,
         ))
