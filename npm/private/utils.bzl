@@ -91,9 +91,19 @@ def _convert_pnpm_v6_version_peer_dep(version):
     return version
 
 def _convert_pnpm_v6_package_name(package_name):
-    # Covert a pnpm lock file v6 name/version string of the format
-    # @scope/name@version(@scope/name@version)(@scope/name@version)
-    # to a @scope/name/version_peer_version that is compatible with rules_js.
+    # Convert a pnpm lock file v6 "version" to a rules_js compatible id.
+    #
+    #  Only version:
+    #   semver:                 1.2.3
+    #   registry+semver:        registry.npmjs.org/@types/node@16.18.11
+    #   pnpm links:             link:../pkg
+    #   dependency version:     2.0.0(@aspect-test/c@2.0.2)
+    #
+    #  Package name + version:
+    #   package registry key:   registry.npmjs.org/@types/node@16.18.11:
+    #   package key:            /@aspect-test/c@2.0.2
+    #                           /rollup@3.2.5
+    #   package peer key:       /@aspect-test/d@2.0.0(@aspect-test/c@2.0.2)
     if package_name.startswith("/"):
         package_name = _convert_pnpm_v6_version_peer_dep(package_name)
         segments = package_name.rsplit("@", 1)
@@ -103,6 +113,9 @@ def _convert_pnpm_v6_package_name(package_name):
         return "%s/%s" % (segments[0], segments[1])
     else:
         return _convert_pnpm_v6_version_peer_dep(package_name)
+
+# TODO: separate implementation for version vs name
+_convert_pnpm_v6_package_version = _convert_pnpm_v6_package_name
 
 def _convert_v6_importers(importers):
     # Convert pnpm lockfile v6 importers to a rules_js compatible format.
@@ -114,7 +127,7 @@ def _convert_v6_importers(importers):
             if deps != None:
                 result[import_path][key] = {}
                 for name, attributes in deps.items():
-                    result[import_path][key][name] = _convert_pnpm_v6_package_name(attributes.get("version"))
+                    result[import_path][key][name] = _convert_pnpm_v6_package_version(attributes.get("version"))
     return result
 
 def _convert_v6_packages(packages):
@@ -127,7 +140,7 @@ def _convert_v6_packages(packages):
             if deps != None:
                 dependencies = {}
                 for dep_name, dep_version in deps.items():
-                    dependencies[dep_name] = _convert_pnpm_v6_package_name(dep_version)
+                    dependencies[dep_name] = _convert_pnpm_v6_package_version(dep_version)
                 package_info[key] = dependencies
 
         result[_convert_pnpm_v6_package_name(package)] = package_info
