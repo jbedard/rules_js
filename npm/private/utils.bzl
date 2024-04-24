@@ -121,17 +121,15 @@ def _convert_v6_packages(packages):
     # Convert pnpm lockfile v6 importers to a rules_js compatible format.
     result = {}
     for package, package_info in packages.items():
-        # dependencies
-        dependencies = {}
-        for dep_name, dep_version in package_info.get("dependencies", {}).items():
-            dependencies[dep_name] = _convert_pnpm_v6_package_name(dep_version)
-        package_info["dependencies"] = dependencies
+        # convert v6 package dependencies + optionalDependencies
+        for key in ["dependencies", "optionalDependencies"]:
+            deps = package_info.get(key, None)
+            if deps != None:
+                dependencies = {}
+                for dep_name, dep_version in deps.items():
+                    dependencies[dep_name] = _convert_pnpm_v6_package_name(dep_version)
+                package_info[key] = dependencies
 
-        # optionalDependencies
-        optional_dependencies = {}
-        for dep_name, dep_version in package_info.get("optionalDependencies", {}).items():
-            optional_dependencies[dep_name] = _convert_pnpm_v6_package_name(dep_version)
-        package_info["optionalDependencies"] = optional_dependencies
         result[_convert_pnpm_v6_package_name(package)] = package_info
     return result
 
