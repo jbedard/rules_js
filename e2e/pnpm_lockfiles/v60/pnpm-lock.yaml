@@ -34,17 +34,17 @@ importers:
         version: 5.0.2
       '@types/node':
         specifier: ~16.18.11
-        version: registry.npmjs.org/@types/node@16.18.11
+        version: 16.18.11
 
-  projects/a: {}
+  ../projects/a: {}
 
-  projects/b:
+  ../projects/b:
     dependencies:
       '@scoped/a':
         specifier: workspace:*
         version: link:../a
 
-  projects/c:
+  ../projects/c:
     dependencies:
       '@scoped/a':
         specifier: link:../a
@@ -85,6 +85,10 @@ packages:
     resolution: {integrity: sha512-GyAxHYKN650db+xnimHnL2LPz65ilmQsVhCasWA7drDNQn/rfmPiEVMzjRiS7m46scXIERaBmiJMzYDf0bIUbA==}
     hasBin: true
     dev: false
+
+  /@types/node@16.18.11:
+    resolution: {integrity: sha512-3oJbGBUWuS6ahSnEq1eN2XrCyf4YsWI8OyCvo7c64zQJNplk3mO84t53o8lfTk+2ji59g5ycfc6qQ3fdHliHuA==}
+    dev: true
 
   /dequal@2.0.3:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
@@ -144,9 +148,3 @@ packages:
       kleur: 4.1.5
       sade: 1.8.1
     dev: false
-
-  registry.npmjs.org/@types/node@16.18.11:
-    resolution: {integrity: sha512-3oJbGBUWuS6ahSnEq1eN2XrCyf4YsWI8OyCvo7c64zQJNplk3mO84t53o8lfTk+2ji59g5ycfc6qQ3fdHliHuA==, registry: https://registry.yarnpkg.com/, tarball: https://registry.npmjs.org/@types/node/-/node-16.18.11.tgz}
-    name: '@types/node'
-    version: 16.18.11
-    dev: true

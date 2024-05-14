@@ -2,9 +2,9 @@
 Test utils for lockfiles
 """
 
-load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@aspect_rules_js//js:defs.bzl", "js_test")
 load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
 def lockfile_test(name = "lockfile", node_modules = "node_modules"):
     """
@@ -19,7 +19,7 @@ def lockfile_test(name = "lockfile", node_modules = "node_modules"):
     if native.package_name() != "v53":
         copy_file(
             name = "copy-tests",
-            src = "//:patched-dependencies-test.js",
+            src = "//:base/patched-dependencies-test.js",
             out = "patched-dependencies-test.js",
         )
 
