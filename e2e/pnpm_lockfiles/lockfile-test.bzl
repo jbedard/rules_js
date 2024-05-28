@@ -77,7 +77,7 @@ def lockfile_test(name = None):
             # link:, workspace:, file:, ./rel/path
             ":node_modules/@scoped/a",
             ":node_modules/@scoped/b",
-            # ":node_modules/@scoped/c", TODO: see README
+            ":node_modules/@scoped/c",
             ":node_modules/@scoped/d",
 
             # npm:
@@ -97,9 +97,8 @@ def lockfile_test(name = None):
             # Patched dependencies
             ":.aspect_rules_js/node_modules/meaning-of-life@1.0.0_o3deharooos255qt5xdujc3cuq",
 
-            # TODO: differs across lockfile versions
             # Direct deps from custom registry
-            # ":.aspect_rules_js/node_modules/@types+node@registry.npmjs.org+@types+node@16.18.11",
+            ":.aspect_rules_js/node_modules/@types+node@16.18.11",
 
             # Direct deps with peers
             ":.aspect_rules_js/node_modules/@aspect-test+d@2.0.0_at_aspect-test_c_2.0.2",
