@@ -207,30 +207,35 @@ def _js_library_impl(ctx):
     sources = depset(transitive = [sources, additional_sources])
     types = depset(transitive = [types, additional_sources, additional_types])
 
+    # Avoid concatenating more then once
+    srcs_types = ctx.attr.srcs + ctx.attr.types
+    srcs_types_deps = srcs_types + ctx.attr.deps
+    srcs_data_deps = ctx.attr.srcs + ctx.attr.data + ctx.attr.deps
+
     transitive_sources = gather_transitive_sources(
         sources = sources,
-        targets = ctx.attr.srcs + ctx.attr.types + ctx.attr.deps,
+        targets = srcs_types_deps,
     )
 
     transitive_types = gather_transitive_types(
         types = types,
-        targets = ctx.attr.srcs + ctx.attr.types + ctx.attr.deps,
+        targets = srcs_types_deps,
     )
 
     npm_sources = gather_npm_sources(
-        srcs = ctx.attr.srcs + ctx.attr.types,
+        srcs = srcs_types,
         deps = ctx.attr.deps,
     )
 
     npm_package_store_infos = gather_npm_package_store_infos(
-        targets = ctx.attr.srcs + ctx.attr.data + ctx.attr.deps,
+        targets = srcs_data_deps,
     )
 
     runfiles = gather_runfiles(
         ctx = ctx,
         sources = transitive_sources,
         data = ctx.attr.data,
-        deps = ctx.attr.srcs + ctx.attr.types + ctx.attr.deps,
+        deps = srcs_types_deps,
         data_files = ctx.files.data,
         copy_data_files_to_bin = ctx.attr.copy_data_to_bin,
         no_copy_to_bin = ctx.files.no_copy_to_bin,

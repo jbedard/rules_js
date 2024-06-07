@@ -14,14 +14,20 @@ def gather_transitive_sources(sources, targets):
     Returns:
         A depset of transitive sources
     """
-    if type(sources) == "list":
-        sources = depset(sources)
     transitive = [
         target[JsInfo].transitive_sources
         for target in targets
         if JsInfo in target and hasattr(target[JsInfo], "transitive_sources")
     ]
-    return depset([], transitive = [sources] + transitive)
+
+    # Would avoiding large []+ in this case be worth it?
+    if type(sources) == "list":
+        deps = sources
+    else:
+        deps = []
+        transitive = [sources] + transitive
+
+    return depset(deps, transitive = transitive)
 
 def gather_transitive_types(types, targets):
     """Gathers transitive types from a list of direct types and targets
@@ -33,14 +39,20 @@ def gather_transitive_types(types, targets):
     Returns:
         A depset of transitive sources
     """
-    if type(types) == "list":
-        types = depset(types)
     transitive = [
         target[JsInfo].transitive_types
         for target in targets
         if JsInfo in target and hasattr(target[JsInfo], "transitive_types")
     ]
-    return depset([], transitive = [types] + transitive)
+
+    # Would avoiding large []+ in this case be worth it?
+    if type(types) == "list":
+        deps = types
+    else:
+        deps = []
+        transitive = [types] + transitive
+
+    return depset(deps, transitive = transitive)
 
 def gather_npm_sources(srcs, deps):
     """Gathers npm sources from a list of srcs and deps targets
@@ -53,11 +65,18 @@ def gather_npm_sources(srcs, deps):
         Depset of npm sources
     """
 
-    return depset([], transitive = [
-        target[JsInfo].npm_sources
-        for target in srcs + deps
-        if JsInfo in target and hasattr(target[JsInfo], "npm_sources")
-    ])
+    transitive = []
+
+    # Duplicate loops to avoid src + deps concat
+    for target in srcs:
+        if JsInfo in target and hasattr(target[JsInfo], "npm_sources"):
+            transitive.append(target[JsInfo].npm_sources)
+
+    for target in deps:
+        if JsInfo in target and hasattr(target[JsInfo], "npm_sources"):
+            transitive.append(target[JsInfo].npm_sources)
+
+    return depset([], transitive = transitive)
 
 def gather_npm_package_store_infos(targets):
     """Gathers NpmPackageStoreInfo providers from the list of targets
@@ -185,9 +204,12 @@ def gather_runfiles(
     for target in data:
         transitive_files_depsets.append(target[DefaultInfo].files)
 
+    # Avoid concatenating more then once
+    data_deps = data + deps
+
     # Gather files from JsInfo providers of data & deps
     transitive_files_depsets.append(gather_files_from_js_infos(
-        targets = data + deps,
+        targets = data_deps,
         include_sources = include_sources,
         include_types = include_types,
         include_transitive_sources = include_transitive_sources,
@@ -212,7 +234,7 @@ def gather_runfiles(
         transitive_files = depset(transitive = transitive_files_depsets),
     ).merge_all([
         target[DefaultInfo].default_runfiles
-        for target in data + deps
+        for target in data_deps
     ])
 
 LOG_LEVELS = {
