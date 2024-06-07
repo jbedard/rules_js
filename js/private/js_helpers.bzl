@@ -17,7 +17,7 @@ def gather_transitive_sources(sources, targets):
     transitive = [
         target[JsInfo].transitive_sources
         for target in targets
-        if JsInfo in target and hasattr(target[JsInfo], "transitive_sources")
+        if JsInfo in target
     ]
 
     # Would avoiding large []+ in this case be worth it?
@@ -42,7 +42,7 @@ def gather_transitive_types(types, targets):
     transitive = [
         target[JsInfo].transitive_types
         for target in targets
-        if JsInfo in target and hasattr(target[JsInfo], "transitive_types")
+        if JsInfo in target
     ]
 
     # Would avoiding large []+ in this case be worth it?
@@ -69,11 +69,11 @@ def gather_npm_sources(srcs, deps):
 
     # Duplicate loops to avoid src + deps concat
     for target in srcs:
-        if JsInfo in target and hasattr(target[JsInfo], "npm_sources"):
+        if JsInfo in target:
             transitive.append(target[JsInfo].npm_sources)
 
     for target in deps:
-        if JsInfo in target and hasattr(target[JsInfo], "npm_sources"):
+        if JsInfo in target:
             transitive.append(target[JsInfo].npm_sources)
 
     return depset([], transitive = transitive)
@@ -297,15 +297,15 @@ def gather_files_from_js_infos(
     for target in targets:
         if JsInfo in target:
             js_info = target[JsInfo]
-            if include_sources and hasattr(js_info, "sources"):
+            if include_sources:
                 files_depsets.append(js_info.sources)
-            if include_types and hasattr(js_info, "types"):
+            if include_types:
                 files_depsets.append(js_info.types)
-            if include_transitive_sources and hasattr(js_info, "transitive_sources"):
+            if include_transitive_sources:
                 files_depsets.append(js_info.transitive_sources)
-            if include_transitive_types and hasattr(js_info, "transitive_types"):
+            if include_transitive_types:
                 files_depsets.append(js_info.transitive_types)
-            if include_npm_sources and hasattr(js_info, "npm_sources"):
+            if include_npm_sources:
                 files_depsets.append(js_info.npm_sources)
 
     return depset([], transitive = files_depsets)
