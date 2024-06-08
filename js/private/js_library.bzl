@@ -24,7 +24,7 @@ js_library(
 """
 
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "COPY_FILE_TO_BIN_TOOLCHAINS")
-load(":js_helpers.bzl", "copy_js_file_to_bin_action", "gather_npm_package_store_infos", "gather_npm_sources", "gather_runfiles", "gather_transitive_sources", "gather_transitive_types")
+load(":js_helpers.bzl", "copy_js_file_to_bin_action", "gather_npm_package_store_infos", "gather_npm_sources", "gather_runfiles")
 load(":js_info.bzl", "JsInfo", "js_info")
 
 _DOC = """A library of JavaScript sources. Provides JsInfo, the primary provider used in rules_js
@@ -212,15 +212,14 @@ def _js_library_impl(ctx):
     srcs_types_deps = srcs_types + ctx.attr.deps
     srcs_data_deps = ctx.attr.srcs + ctx.attr.data + ctx.attr.deps
 
-    transitive_sources = gather_transitive_sources(
-        sources = sources,
-        targets = srcs_types_deps,
-    )
-
-    transitive_types = gather_transitive_types(
-        types = types,
-        targets = srcs_types_deps,
-    )
+    transitive_sources = [sources]
+    transitive_types = [types]
+    for target in srcs_types_deps:
+        if JsInfo in target:
+            transitive_sources.append(target[JsInfo].transitive_sources)
+            transitive_types.append(target[JsInfo].transitive_types)
+    transitive_sources = depset(transitive = transitive_sources)
+    transitive_types = depset(transitive = transitive_types)
 
     npm_sources = gather_npm_sources(
         srcs = srcs_types,
