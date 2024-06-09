@@ -130,15 +130,11 @@ a runtime dependency on this target.
     ),
 }
 
-def _gather_sources_and_types(ctx, targets, files):
+def _gather_sources_and_types(ctx, files):
     """Gathers sources and types from a list of targets
 
     Args:
         ctx: the rule context
-
-        targets: List of targets to gather sources and types from their JsInfo providers.
-
-            These typically come from the `srcs` and/or `data` attributes of a rule
 
         files: List of files to gather as sources and types.
 
@@ -175,37 +171,16 @@ def _gather_sources_and_types(ctx, targets, files):
         else:
             sources.append(file)
 
-    # sources as depset
-    sources = depset(sources, transitive = [
-        target[JsInfo].sources
-        for target in targets
-        if JsInfo in target and hasattr(target[JsInfo], "sources")
-    ])
-
-    # types as depset
-    types = depset(types, transitive = [
-        target[JsInfo].types
-        for target in targets
-        if JsInfo in target and hasattr(target[JsInfo], "types")
-    ])
-
     return (sources, types)
 
 def _js_library_impl(ctx):
     sources, types = _gather_sources_and_types(
         ctx = ctx,
-        targets = ctx.attr.srcs,
-        files = ctx.files.srcs,
+        files = ctx.files.srcs + ctx.files.types,
     )
 
-    additional_sources, additional_types = _gather_sources_and_types(
-        ctx = ctx,
-        targets = ctx.attr.types,
-        files = ctx.files.types,
-    )
-
-    sources = depset(transitive = [sources, additional_sources])
-    types = depset(transitive = [types, additional_sources, additional_types])
+    sources.extend(additional_sources)
+    types.extend(additional_types)
 
     transitive_sources = gather_transitive_sources(
         sources = sources,
@@ -226,6 +201,17 @@ def _js_library_impl(ctx):
         targets = ctx.attr.srcs + ctx.attr.data + ctx.attr.deps,
     )
 
+    sources_depset = depset(sources, transitive = [
+        target[JsInfo].sources
+        for target in ctx.attr.srcs
+        if JsInfo in target and hasattr(target[JsInfo], "sources")
+    ])
+    types_depset = depset(types, transitive = [
+        target[JsInfo].types
+        for target in ctx.attr.types
+        if JsInfo in target and hasattr(target[JsInfo], "types")
+    ])
+
     runfiles = gather_runfiles(
         ctx = ctx,
         sources = transitive_sources,
@@ -244,19 +230,19 @@ def _js_library_impl(ctx):
     return [
         js_info(
             target = ctx.label,
-            sources = sources,
-            types = types,
+            sources = sources_depset,
+            types = types_depset,
             transitive_sources = transitive_sources,
             transitive_types = transitive_types,
             npm_sources = npm_sources,
             npm_package_store_infos = npm_package_store_infos,
         ),
         DefaultInfo(
-            files = sources,
+            files = sources_depset,
             runfiles = runfiles,
         ),
         OutputGroupInfo(
-            types = types,
+            types = types_depset,
             runfiles = runfiles.files,
         ),
     ]
