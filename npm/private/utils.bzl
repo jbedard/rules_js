@@ -17,7 +17,7 @@ def _sorted_map(m):
 
     return result
 
-def _sanitize_string(string):
+def _sanitize_rule_name(string):
     # Workspace names may contain only A-Z, a-z, 0-9, '-', '_' and '.'
     result = ""
     for c in string.elems():
@@ -28,19 +28,17 @@ def _sanitize_string(string):
         result += c
     return result.strip("_-")
 
+def _sanitize_path(p):
+    return p.replace("://", "+").replace("/", "+")
+
 def _bazel_name(name, version = None):
     "Make a bazel friendly name from a package name and (optionally) a version that can be used in repository and target names"
-    escaped_name = _sanitize_string(name)
+    escaped_name = _sanitize_rule_name(name)
     if not version:
         return escaped_name
 
-    # Add an extra _ before the first segment
-    version_segments_start = version.find("_")
-    if version_segments_start != -1:
-        version = version[:version_segments_start] + "_" + version[version_segments_start:]
-
     # Separate name + version with extra _
-    return "%s__%s" % (escaped_name, _sanitize_string(version))
+    return "%s__%s" % (escaped_name, _sanitize_rule_name(version))
 
 def _package_key(name, version):
     "Make a name/version pnpm-style name for a package name and version"
@@ -65,11 +63,9 @@ def _package_store_name(pnpm_name, pnpm_version):
     if version.startswith("@"):
         # Special case where the package name should _not_ be included in the package store name.
         # See https://github.com/aspect-build/rules_js/issues/423 for more context.
-        return version.replace("/", "+")
+        return _sanitize_path(version)
     else:
-        escaped_name = name.replace("/", "+")
-        escaped_version = version.replace("://", "/").replace("/", "+")
-        return "%s@%s" % (escaped_name, escaped_version)
+        return _sanitize_path("%s@%s" % (name, version))
 
 def _make_symlink(ctx, symlink_path, target_path):
     symlink = ctx.actions.declare_symlink(symlink_path)
@@ -249,7 +245,6 @@ utils = struct(
     bazel_name = _bazel_name,
     sorted_map = _sorted_map,
     package_key = _package_key,
-    sanitize_string = _sanitize_string,
     friendly_name = _friendly_name,
     package_store_name = _package_store_name,
     make_symlink = _make_symlink,
