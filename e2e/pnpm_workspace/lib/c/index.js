@@ -1,3 +1,5 @@
+// NOTE: keep in sync with e2e/pnpm_workspace_rerooted
+
 const packageJson = require('./package.json')
 const f = require('@aspect-test/f')
 module.exports = {
