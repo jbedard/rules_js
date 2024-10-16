@@ -18,14 +18,15 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: |
-                      ~/.cache/bazel-disk-cache
-                      ~/.cache/bazel-repository-cache
-                      ~/.cache/xdg-cache
+                      ${HOME}/.cache/bazel-disk-cache
+                      ${HOME}/.cache/bazel-repository-cache
+                      ${HOME}/.cache/xdg-cache
                   key: bazel-cache-release-${{ hashFiles('.bazelrc', '.bazelversion', '.bazeliskrc', '**/BUILD', '**/BUILD.bazel', '**/*.bzl', 'WORKSPACE', 'WORKSPACE.bazel', 'WORKSPACE.bzlmod', 'MODULE.bazel', '**/*.js', '!e2e') }}
                   restore-keys: bazel-cache-release-
             - name: bazel test //...
               env:
-                  XDG_CACHE_HOME: ~/.cache/xdg-cache # bazelisk will download bazel to here
+                  # bazelisk will download bazel to here
+                  XDG_CACHE_HOME: ${HOME}/.cache/xdg-cache
               run: bazel --bazelrc=.github/workflows/ci.bazelrc --bazelrc=.bazelrc test //...
             - name: Prepare release
               run: .github/workflows/release_prep.sh ${{ env.GITHUB_REF_NAME }} > release_notes.txt
