@@ -71,8 +71,14 @@ npm = use_extension(
         "lock-%s__rollup__3.29.4__links" % version,
 
         # Dep only referenced via npm: should have the real package name in the repo name
-        "lock-%s__at_types_sizzle__2.3.8" % version,
-        "lock-%s__at_types_sizzle__2.3.8__links" % version,
+        "lock-%s__at_types_sizzle__%s2.3.8" % (
+            version,
+            "registry.npmjs.org_at_types_sizzle_" if version != "v90" else "",
+        ),
+        "lock-%s__at_types_sizzle__%s2.3.8__links" % (
+            version,
+            "registry.npmjs.org_at_types_sizzle_" if version != "v90" else "",
+        ),
 
         # Dep with peers
         "lock-%s__at_aspect-test_d__2.0.0_at_aspect-test_c_2.0.2" % version,

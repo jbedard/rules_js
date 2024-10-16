@@ -33,13 +33,10 @@ def gather_transitive_closure(packages, package, no_optional, cache = {}):
             msg = "gather_transitive_closure exhausted the iteration limit of {} - please report this issue".format(iteration_max)
             fail(msg)
         deps = stack.pop()
-        for name in deps.keys():
-            version = deps[name]
-            if version.startswith("npm:"):
-                # an aliased dependency
-                package_key = version[4:]
-                name, version = package_key.rsplit("@", 1)
-            elif version not in packages:
+        for dep_key in deps.keys():
+            name = dep_key
+            version = deps[dep_key]
+            if version not in packages:
                 package_key = utils.package_key(name, version)
             else:
                 package_key = version
@@ -63,7 +60,7 @@ def gather_transitive_closure(packages, package, no_optional, cache = {}):
                 # Recurse into the next level of dependencies
                 stack.append(_get_package_info_deps(packages[package_key], no_optional))
             else:
-                msg = "Unknown package key: {} ({} @ {}) in {}".format(package_key, name, version, packages.keys())
+                msg = "Unknown package key: {} from {} @ {} in {}".format(package_key, dep_key, deps[dep_key], packages.keys())
                 fail(msg)
 
     return utils.sorted_map(transitive_closure)

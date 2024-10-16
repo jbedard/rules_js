@@ -18,7 +18,7 @@ def _parse_empty_lock_test_impl(ctx):
 expected_importers = {
     ".": {
         "dependencies": {
-            "@aspect-test/a": "5.0.0",
+            "@aspect-test/a": "@aspect-test/a@5.0.0",
         },
         "dev_dependencies": {},
         "optional_dependencies": {},
@@ -29,9 +29,6 @@ expected_packages = {
         "id": None,
         "name": "@aspect-test/a",
         "dependencies": {
-            "@aspect-test/b": "5.0.0",
-            "@aspect-test/c": "1.0.0",
-            "@aspect-test/d": "2.0.0_at_aspect-test_c_1.0.0",
         },
         "optional_dependencies": {},
         "dev": False,
@@ -65,9 +62,6 @@ def _parse_lockfile_v5_test_impl(ctx):
       },
       "hasBin": true,
       "dependencies": {
-        "@aspect-test/b": "5.0.0",
-        "@aspect-test/c": "1.0.0",
-        "@aspect-test/d": "2.0.0_@aspect-test+c@1.0.0"
       },
       "dev": false
     }
@@ -106,9 +100,6 @@ def _parse_lockfile_v6_test_impl(ctx):
       },
       "hasBin": true,
       "dependencies": {
-        "@aspect-test/b": "5.0.0",
-        "@aspect-test/c": "1.0.0",
-        "@aspect-test/d": "2.0.0(@aspect-test/c@1.0.0)"
       },
       "dev": false
     }
@@ -159,9 +150,6 @@ def _parse_lockfile_v9_test_impl(ctx):
   "snapshots": {
     "@aspect-test/a@5.0.0": {
       "dependencies": {
-        "@aspect-test/b": "5.0.0",
-        "@aspect-test/c": "1.0.0",
-        "@aspect-test/d": "2.0.0(@aspect-test/c@1.0.0)"
       }
     }
   }

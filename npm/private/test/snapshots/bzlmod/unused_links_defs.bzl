@@ -21,9 +21,9 @@ def npm_imported_package_store(name):
     link_root_name = name[:-len("/unused")]
 
     deps = {
-        ":.aspect_rules_js/{}/esprima@1.0.0/pkg".format(link_root_name): "esprima",
-        ":.aspect_rules_js/{}/minimist@0.0.10/pkg".format(link_root_name): "minimist",
-        ":.aspect_rules_js/{}/optimist@0.6.0/pkg".format(link_root_name): "optimist",
+        ":.aspect_rules_js/{}/esprima@1.0.0/pkg".format(link_root_name): "esprima,esprima",
+        ":.aspect_rules_js/{}/minimist@0.0.10/pkg".format(link_root_name): "minimist,minimist",
+        ":.aspect_rules_js/{}/optimist@0.6.0/pkg".format(link_root_name): "optimist,optimist",
         ":.aspect_rules_js/{}/unused@0.2.2/pkg".format(link_root_name): "unused",
         ":.aspect_rules_js/{}/wordwrap@0.0.3/pkg".format(link_root_name): "wordwrap",
     }

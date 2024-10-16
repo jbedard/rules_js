@@ -51,11 +51,14 @@ def _package_store_name(pnpm_name, pnpm_version):
     if pnpm_version.startswith("link:") or pnpm_version.startswith("file:"):
         name = pnpm_name
         version = "0.0.0"
-    elif pnpm_version.startswith("npm:"):
-        name, version = pnpm_version[4:].rsplit("@", 1)
     else:
-        name = pnpm_name
-        version = pnpm_version
+        at_idx = pnpm_version.find("@", 1)
+        if at_idx != -1:
+            name = pnpm_version[:at_idx]
+            version = pnpm_version[at_idx + 1:]
+        else:
+            name = pnpm_name
+            version = pnpm_version
 
     if version.startswith("@"):
         # Special case where the package name should _not_ be included in the package store name.

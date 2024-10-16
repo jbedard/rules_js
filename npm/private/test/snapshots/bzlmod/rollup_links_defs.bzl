@@ -21,7 +21,7 @@ def npm_imported_package_store(name):
     link_root_name = name[:-len("/rollup")]
 
     deps = {
-        ":.aspect_rules_js/{}/fsevents@2.3.2/pkg".format(link_root_name): "fsevents",
+        ":.aspect_rules_js/{}/fsevents@2.3.2/pkg".format(link_root_name): "fsevents,fsevents",
         ":.aspect_rules_js/{}/rollup@2.70.2/pkg".format(link_root_name): "rollup",
     }
     ref_deps = {

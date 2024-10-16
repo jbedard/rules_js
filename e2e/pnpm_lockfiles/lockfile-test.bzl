@@ -40,6 +40,9 @@ def lockfile_test(name = None):
     lock_version = name if name else native.package_name()
     lock_repo = "lock-%s" % lock_version
 
+    # numeric version for conditional assertions based on lockfile version
+    v = int(lock_version[1:]) // 10
+
     # Copy each test to this lockfile dir
     for test in ["patched-dependencies-test.js", "aliases-test.js"]:
         copy_file(
@@ -152,8 +155,8 @@ def lockfile_test(name = None):
 
             # npm: alias to package not listed elsewhere
             ":node_modules/alias-only-sizzle",
-            ":.aspect_rules_js/node_modules/@types+sizzle@2.3.8",
-            "@%s__at_types_sizzle__2.3.8//:pkg" % lock_repo,
+            ":.aspect_rules_js/node_modules/%s" % ("@types+sizzle@2.3.8" if v >= 9 else "registry.npmjs.org+@types+sizzle@2.3.8" if v >= 6 else "registry.npmjs.org+@types+sizzle+2.3.8"),
+            "@%s__at_types_sizzle__%s2.3.8//:pkg" % (lock_repo, "" if v >= 9 else "registry.npmjs.org_at_types_sizzle_"),
 
             # Targets within the virtual store...
             # Direct dep targets
@@ -177,7 +180,7 @@ def lockfile_test(name = None):
             "@%s__meaning-of-life__1.0.0_o3deharooos255qt5xdujc3cuq//:pkg" % lock_repo,
 
             # Direct deps from custom registry
-            ":.aspect_rules_js/node_modules/@types+node@16.18.11",
+            ":.aspect_rules_js/node_modules/%s" % ("@types+node@16.18.11" if v >= 9 else "registry.npmjs.org+@types+node@16.18.11" if v >= 6 else "registry.npmjs.org+@types+node+16.18.11"),
 
             # Direct deps with peers
             ":.aspect_rules_js/node_modules/@aspect-test+d@2.0.0_at_aspect-test_c_2.0.2",
