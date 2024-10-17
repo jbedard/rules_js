@@ -165,7 +165,7 @@ sh_binary(
                 else:
                     dep_path = helpers.link_package(root_package, dep_version[len("file:"):])
                 dep_key = "{}+{}".format(dep_package, dep_version)
-                if not dep_key in fp_links.keys():
+                if not fp_links.get("dep_key", False):
                     msg = "Expected to file: referenced package {} in first-party links".format(dep_key)
                     fail(msg)
                 fp_links[dep_key]["link_packages"][link_package] = []
@@ -174,12 +174,12 @@ sh_binary(
                 dep_importer = paths.normalize("{}/{}".format(import_path, dep_version) if import_path else dep_version)
                 dep_path = helpers.link_package(root_package, import_path, dep_version)
                 dep_key = "{}+{}".format(dep_package, dep_path)
-                if dep_key in fp_links.keys():
+                if fp_links.get(dep_key, False):
                     fp_links[dep_key]["link_packages"][link_package] = []
                 else:
                     transitive_deps = {}
                     raw_deps = {}
-                    if dep_importer in importers.keys():
+                    if importers.get(dep_importer, False):
                         raw_deps = importers.get(dep_importer).get("deps")
                     for raw_package, raw_version in raw_deps.items():
                         package_store_name = utils.package_store_name(raw_package, raw_version)
