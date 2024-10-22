@@ -184,14 +184,13 @@ async function syncRecursive(src, dst, sandbox, writePerm) {
             }
             return (
                 await Promise.all(
-                    contents.map(
-                        async (entry) =>
-                            await syncRecursive(
-                                path.join(src, entry),
-                                path.join(dst, entry),
-                                sandbox,
-                                writePerm
-                            )
+                    contents.map((entry) =>
+                        syncRecursive(
+                            path.join(src, entry),
+                            path.join(dst, entry),
+                            sandbox,
+                            writePerm
+                        )
                     )
                 )
             ).reduce((s, t) => s + t, 0)
@@ -305,6 +304,8 @@ async function syncFiles(files, sandbox, writePerm) {
     console.error(`+ Syncing ${files.length} files & folders...`)
     const startTime = perf_hooks.performance.now()
 
+    let syncPromises = []
+
     const [nodeModulesFiles, otherFiles] = partitionArray(
         files,
         isNodeModulePath
@@ -323,15 +324,13 @@ async function syncFiles(files, sandbox, writePerm) {
         )
     }
 
-    let totalSynced = (
-        await Promise.all(
-            otherFiles.map(async (file) => {
-                const src = path.join(RUNFILES_ROOT, file)
-                const dst = path.join(sandbox, file)
-                return await syncRecursive(src, dst, sandbox, writePerm)
-            })
-        )
-    ).reduce((s, t) => s + t, 0)
+    syncPromises = syncPromises.concat(
+        otherFiles.map((file) => {
+            const src = path.join(RUNFILES_ROOT, file)
+            const dst = path.join(sandbox, file)
+            return syncRecursive(src, dst, sandbox, writePerm)
+        })
+    )
 
     // Sync first-party package store files before other node_modules files since correctly syncing
     // direct 1p node_modules symlinks depends on checking if the package store synced files exist.
@@ -341,15 +340,13 @@ async function syncFiles(files, sandbox, writePerm) {
         )
     }
 
-    totalSynced += (
-        await Promise.all(
-            packageStore1pDeps.map(async (file) => {
-                const src = path.join(RUNFILES_ROOT, file)
-                const dst = path.join(sandbox, file)
-                return await syncRecursive(src, dst, sandbox, writePerm)
-            })
-        )
-    ).reduce((s, t) => s + t, 0)
+    syncPromises = syncPromises.concat(
+        packageStore1pDeps.map((file) => {
+            const src = path.join(RUNFILES_ROOT, file)
+            const dst = path.join(sandbox, file)
+            return syncRecursive(src, dst, sandbox, writePerm)
+        })
+    )
 
     // Finally sync all remaining node_modules files
     if (otherNodeModulesFiles.length > 0 && process.env.JS_BINARY__LOG_DEBUG) {
@@ -358,15 +355,18 @@ async function syncFiles(files, sandbox, writePerm) {
         )
     }
 
-    totalSynced += (
-        await Promise.all(
-            otherNodeModulesFiles.map(async (file) => {
-                const src = path.join(RUNFILES_ROOT, file)
-                const dst = path.join(sandbox, file)
-                return await syncRecursive(src, dst, sandbox, writePerm)
-            })
-        )
-    ).reduce((s, t) => s + t, 0)
+    syncPromises = syncPromises.concat(
+        otherNodeModulesFiles.map((file) => {
+            const src = path.join(RUNFILES_ROOT, file)
+            const dst = path.join(sandbox, file)
+            return syncRecursive(src, dst, sandbox, writePerm)
+        })
+    )
+
+    const totalSynced = (await Promise.all(syncPromises)).reduce(
+        (s, t) => s + t,
+        0
+    )
 
     var endTime = perf_hooks.performance.now()
     console.error(
