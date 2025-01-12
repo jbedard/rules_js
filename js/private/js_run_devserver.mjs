@@ -350,6 +350,8 @@ async function syncFiles(files, sandbox, writePerm) {
     console.error(`+ Syncing ${files.length} files & folders...`)
     const startTime = perf_hooks.performance.now()
 
+    await delay('syncFiles')
+
     const [nodeModulesFiles, otherFiles] = partitionArray(
         files,
         isNodeModulePath
@@ -421,6 +423,16 @@ async function syncFiles(files, sandbox, writePerm) {
     )
 }
 
+async function delay(msg) {
+    const d = 1500 + Math.random() * 1000
+
+    console.error(`${Date.now()}: delaying ${msg} by ${d}ms`)
+
+    return await new Promise(function (resolve) {
+        setTimeout(resolve, d)
+    })
+}
+
 async function main(args, sandbox) {
     console.error(
         `\n\nStarting js_run_devserver ${process.env.JS_BINARY__TARGET}`
@@ -429,6 +441,8 @@ async function main(args, sandbox) {
     const configPath = path.join(RUNFILES_ROOT, args[0])
 
     const config = JSON.parse(await fs.promises.readFile(configPath))
+
+    delay(5000)
 
     await syncFiles(
         config.data_files,
