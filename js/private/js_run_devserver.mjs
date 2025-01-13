@@ -13,7 +13,13 @@ const RUNFILES_ROOT = path.join(
 )
 const syncedTime = new Map()
 const syncedChecksum = new Map()
+const syncedFiles = new Set()
 const mkdirs = new Set()
+
+let latestSyncId = 0
+function checkSyncId(syncId) {
+    return latestSyncId === syncId
+}
 
 // Ensure that a directory exists. If it has not been previously created or does not exist then it
 // creates the directory, first recursively ensuring that its parent directory exists. Intentionally
@@ -147,7 +153,11 @@ function partitionArray(array, callback) {
 // synced it is only re-copied if the file's last modified time has changed since the last time that
 // file was copied. Symlinks are not copied but instead a symlink is created under the destination
 // pointing to the source symlink.
-async function syncRecursive(src, dst, sandbox, writePerm) {
+async function syncRecursive(syncId, src, dst, sandbox, writePerm) {
+    if (!checkSyncId(syncId)) {
+        return
+    }
+
     try {
         const lstat = await withRetry(
             () => fs.promises.lstat(src),
@@ -223,6 +233,7 @@ async function syncRecursive(src, dst, sandbox, writePerm) {
                     contents.map(
                         async (entry) =>
                             await syncRecursive(
+                                syncId,
                                 path.join(src, entry),
                                 path.join(dst, entry),
                                 sandbox,
@@ -346,7 +357,7 @@ async function deleteFiles(previousFiles, updatedFiles, sandbox) {
 }
 
 // Sync list of files to the sandbox
-async function syncFiles(files, sandbox, writePerm) {
+async function syncFiles(syncId, files, sandbox, writePerm) {
     console.error(`+ Syncing ${files.length} files & folders...`)
     const startTime = perf_hooks.performance.now()
 
@@ -370,12 +381,16 @@ async function syncFiles(files, sandbox, writePerm) {
         )
     }
 
+    if (!checkSyncId(syncId)) {
+        return
+    }
+
     let totalSynced = (
         await Promise.all(
             otherFiles.map(async (file) => {
                 const src = path.join(RUNFILES_ROOT, file)
                 const dst = path.join(sandbox, file)
-                return await syncRecursive(src, dst, sandbox, writePerm)
+                return await syncRecursive(syncId, src, dst, sandbox, writePerm)
             })
         )
     ).reduce((s, t) => s + t, 0)
@@ -388,12 +403,16 @@ async function syncFiles(files, sandbox, writePerm) {
         )
     }
 
+    if (!checkSyncId(syncId)) {
+        return
+    }
+
     totalSynced += (
         await Promise.all(
             packageStore1pDeps.map(async (file) => {
                 const src = path.join(RUNFILES_ROOT, file)
                 const dst = path.join(sandbox, file)
-                return await syncRecursive(src, dst, sandbox, writePerm)
+                return await syncRecursive(syncId, src, dst, sandbox, writePerm)
             })
         )
     ).reduce((s, t) => s + t, 0)
@@ -405,12 +424,16 @@ async function syncFiles(files, sandbox, writePerm) {
         )
     }
 
+    if (!checkSyncId(syncId)) {
+        return
+    }
+
     totalSynced += (
         await Promise.all(
             otherNodeModulesFiles.map(async (file) => {
                 const src = path.join(RUNFILES_ROOT, file)
                 const dst = path.join(sandbox, file)
-                return await syncRecursive(src, dst, sandbox, writePerm)
+                return await syncRecursive(syncId, src, dst, sandbox, writePerm)
             })
         )
     ).reduce((s, t) => s + t, 0)
@@ -445,6 +468,7 @@ async function main(args, sandbox) {
     delay(5000)
 
     await syncFiles(
+        latestSyncId,
         config.data_files,
         sandbox,
         config.grant_sandbox_write_permissions
@@ -508,14 +532,32 @@ async function main(args, sandbox) {
 
         // Process stdin data in order using a promise chain.
         let syncing = Promise.resolve()
-        const rl = readline.createInterface({ input: process.stdin })
-        rl.on('line', (line) => {
-            syncing = syncing.then(() => processChunk(line))
+        process.stdin.on('data', async (chunk) => {
+            const chunkString = chunk.toString().trim()
+
+            if (chunkString.startsWith('IBAZEL_BUILD_')) {
+                const syncId = ++latestSyncId
+                await (syncing = syncing.then(() =>
+                    processChunk(syncId, chunkString)
+                ))
+            }
+
+            // Forward stdin to the subprocess. See comment about
+            // https://github.com/aspect-build/rules_js/issues/1242 where
+            // `proc` is spawned
+            await new Promise((resolve) => {
+                // note: ignoring error - if this write to stdin fails,
+                // it's probably okay. Can add error handling later if needed
+                proc.stdin.write(chunk, resolve)
+            })
         })
 
-        async function processChunk(chunk) {
+        async function processChunk(syncId, chunkString) {
+            if (!checkSyncId(syncId)) {
+                return
+            }
+
             try {
-                const chunkString = chunk.toString()
                 if (chunkString.includes('IBAZEL_BUILD_COMPLETED SUCCESS')) {
                     if (process.env.JS_BINARY__LOG_DEBUG) {
                         console.error('IBAZEL_BUILD_COMPLETED SUCCESS')
@@ -537,6 +579,7 @@ async function main(args, sandbox) {
 
                         // Sync changed files
                         syncFiles(
+                            syncId,
                             updatedDataFiles,
                             sandbox,
                             config.grant_sandbox_write_permissions
@@ -549,19 +592,23 @@ async function main(args, sandbox) {
                     if (process.env.JS_BINARY__LOG_DEBUG) {
                         console.error('IBAZEL_BUILD_STARTED')
                     }
-                }
 
-                // Forward stdin to the subprocess. See comment about
-                // https://github.com/aspect-build/rules_js/issues/1242 where
-                // `proc` is spawned
-                await new Promise((resolve) => {
-                    // note: ignoring error - if this write to stdin fails,
-                    // it's probably okay. Can add error handling later if needed
-                    proc.stdin.write(chunk, resolve)
-                })
+                    // Increment the syncId to halt any existing sync
+                    latestSyncId++
+                } else if (
+                    chunkString.includes('IBAZEL_BUILD_COMPLETED FAILURE')
+                ) {
+                    if (process.env.JS_BINARY__LOG_DEBUG) {
+                        console.error('IBAZEL_BUILD_COMPLETED')
+                    }
+
+                    // Increment the syncId to halt any existing sync
+                    latestSyncId++
+                }
             } catch (e) {
                 console.error(
-                    `An error has occurred while incrementally syncing files. Error: ${e}`
+                    'An error has occurred while incrementally syncing files:',
+                    e
                 )
                 process.exit(1)
             }
