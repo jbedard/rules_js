@@ -447,7 +447,7 @@ async function syncFiles(syncId, files, sandbox, writePerm) {
 }
 
 async function delay(msg) {
-    const d = 1500 + Math.random() * 1000
+    const d = 0 //1500 + Math.random() * 1000
 
     console.error(`${Date.now()}: delaying ${msg} by ${d}ms`)
 
