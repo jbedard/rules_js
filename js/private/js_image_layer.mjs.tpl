@@ -228,7 +228,7 @@ async function split() {
 
     {{VARIABLES}}
 
-    for (const key of Object.keys(entries).sort()) {
+    for (const key in entries) {
         const {
             dest,
             is_directory,
