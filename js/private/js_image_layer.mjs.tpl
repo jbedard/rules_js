@@ -89,7 +89,9 @@ async function resolveSymlink(p) {
     }
 }
 
-async function* walk(dir, accumulate = '') {
+async function walk(dir, cb, accumulate = '') {
+    const pending = []
+
     const dirents = await readdir(dir, { withFileTypes: true })
     for (const dirent of dirents) {
         let isDirectory = dirent.isDirectory()
@@ -117,14 +119,19 @@ async function* walk(dir, accumulate = '') {
         }
 
         if (isDirectory) {
-            yield* walk(
+            const p = walk(
                 path.join(dir, dirent.name),
+                cb,
                 path.join(accumulate, dirent.name)
             )
+
+            pending.push(p)
         } else {
-            yield path.join(accumulate, dirent.name)
+            cb(path.join(accumulate, dirent.name))
         }
     }
+
+    await Promise.all(pending)
 }
 
 function add_parents(
@@ -198,6 +205,8 @@ function _mtree_file_line(key, content) {
     // TODO: use computed_substitutions when we only support >= Bazel 7
     const entries = JSON.parse((await readFile("{{ENTRIES}}")).toString())
 
+    const pending = []
+
     {{VARIABLES}}
 
     for (const key in entries) {
@@ -226,13 +235,14 @@ function _mtree_file_line(key, content) {
 
         // its a treeartifact. expand it and add individual entries.
         if (is_directory) {
-            for await (const sub_key of walk(dest)) {
+            const p = walk(dest, function walkCallback(sub_key) {
                 const new_key = path.join(key, sub_key)
                 const new_dest = path.join(dest, sub_key)
 
 				add_parents(mtree, new_key)
 				mtree.add(_mtree_file_line(new_key, new_dest))
-            }
+            })
+            pending.push(p)
             continue
         }
 
@@ -256,7 +266,9 @@ function _mtree_file_line(key, content) {
             )
         }
 
-        const realp = await resolveSymlink(dest)
+        pending.push( resolveSymlink(dest).then(splitResolveSymlinkCallback) )
+
+    function splitResolveSymlinkCallback(realp) {
         // it's important that we don't treat any symlink pointing out of execroot since
         // bazel symlinks external files into sandbox to make them available to us.
         if (realp && !is_external) {
@@ -290,6 +302,10 @@ function _mtree_file_line(key, content) {
             mtree.add(_mtree_file_line(key, dest))
         }
     }
+
+    }
+
+    await Promise.all(pending)
 
     await Promise.all([
        {{WRITE_STATEMENTS}}
