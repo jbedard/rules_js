@@ -76,6 +76,8 @@ async function resolveSymlink(p) {
 async function walk(mtree, key, dest, dir, accumulate = '') {
     const pending = []
 
+    mtree.add(_mtree_dir_line(path.join(key, accumulate)))
+
     const dirents = await readdir(dir, { withFileTypes: true })
     for (const dirent of dirents) {
         let isDirectory = dirent.isDirectory()
@@ -124,7 +126,6 @@ function walkCallback(mtree, key, dest, sub_key) {
   const new_key = path.join(key, sub_key)
   const new_dest = path.join(dest, sub_key)
 
-  add_parents(mtree, new_key)
   mtree.add(_mtree_file_line(new_key, new_dest))
 }
 
@@ -232,15 +233,14 @@ function _mtree_file_line(key, content) {
 
         {{PICK_STATEMENTS}}
   
+        // create parents of current path.
+        add_parents(mtree, key)
 
         // its a treeartifact. expand it and add individual entries.
         if (is_directory) {
             pending.push( walk(mtree, key, dest, dest) )
             continue
         }
-
-        // create parents of current path.
-        add_parents(mtree, key)
 
         // A source file from workspace, not an output of a target.
         if (is_source) {
