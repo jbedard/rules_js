@@ -387,7 +387,7 @@ def _run_splitter(ctx, runfiles_dir, files, entries_json, layer_groups, launcher
     nodeinfo = ctx.toolchains["@rules_nodejs//nodejs:toolchain_type"].nodeinfo
     ctx.actions.run(
         inputs = inputs,
-        arguments = ["--prof", splitter.path],
+        arguments = ["--inspect-brk", splitter.path],
         outputs = splitter_outputs,
         executable = nodeinfo.node,
         progress_message = "Computing Layer Groups %{label}",
@@ -482,7 +482,7 @@ def _js_image_layer_impl(ctx):
         output = ctx.actions.declare_file("%s_%s%s" % (ctx.label.name, typ, ext))
 
         # add the layer group to outputgroupinfo and defaultinfo
-        outputs.append(output)
+        outputs.append(mtree)
         output_groups[typ] = depset([output])
 
         args = ctx.actions.args()
