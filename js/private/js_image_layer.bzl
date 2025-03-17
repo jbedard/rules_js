@@ -436,43 +436,21 @@ def _js_image_layer_impl(ctx):
     # be careful about what you access outside of the function closure. accessing objects
     # such as ctx within this function will make it significantly slower.
     def map_entry(f, _):
-        return [
-            "%s:%s" % (
-                json.encode(runfiles_dir + "/" + _to_rlocation_path(f, workspace_name)),
-                json.encode({
-                    "dest": f.path,
-                    "root": f.root.path,
-                    "is_external": f.owner.repo_name != "",
-                    "is_source": f.is_source,
-                    "is_directory": f.is_directory,
-                    "repo_name": f.owner.repo_name,
-                }),
-            ),
-            # To avoid O(N ^ N) complexity when searching for entries by their destination
-            # the map also has to have entries by their path on bazel-out
-            "%s:%s" % (
-                json.encode(f.path),
-                json.encode({
-                    "skip": True,
-                    "dest": runfiles_dir + "/" + _to_rlocation_path(f, workspace_name),
-                    "root": f.root.path,
-                    "is_external": f.owner.repo_name != "",
-                    "is_source": f.is_source,
-                    "is_directory": f.is_directory,
-                    "repo_name": f.owner.repo_name,
-                }),
-            ),
-        ]
+        return json.encode([
+            runfiles_dir + "/" + _to_rlocation_path(f, workspace_name),
+            f.path,
+            f.root.path,
+            f.owner.repo_name != "",
+            f.is_source,
+            f.is_directory,
+            f.owner.repo_name,
+        ])
 
     entries = ctx.actions.args()
     entries.set_param_file_format("multiline")
 
-    entries.add("{")
-    entries.add_joined(
-        [binary_path, {"dest": launcher.path, "root": launcher.root.path}],
-        join_with = ":",
-        map_each = json.encode,
-    )
+    entries.add("[")
+    entries.add(json.encode([binary_path, launcher.path, launcher.root.path]))
     entries.add_all(
         runfiles_plus_files,
         expand_directories = False,
@@ -483,12 +461,8 @@ def _js_image_layer_impl(ctx):
 
     if repo_mapping:
         entries.add(",")
-        entries.add_joined(
-            [runfiles_dir + "/" + "_repo_mapping", {"dest": repo_mapping.path, "root": repo_mapping.root.path}],
-            join_with = ":",
-            map_each = json.encode,
-        )
-    entries.add("}")
+        entries.add(json.encode([runfiles_dir + "/" + "_repo_mapping", repo_mapping.path, repo_mapping.root.path]))
+    entries.add("]")
 
     entries_json = ctx.actions.declare_file("{}_entries.json".format(ctx.label.name))
     ctx.actions.write(entries_json, content = entries)

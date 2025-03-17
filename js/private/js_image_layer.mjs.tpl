@@ -16,22 +16,6 @@ import * as path from 'node:path'
  * @typedef {Map<string, {match: RegExp, unused_inputs: string, mtree: string }>} LayerGroup
  */
 
-/**
- * @param {Entry} entries 
- * @param {string} value 
- * @returns {string | undefined}
- */
-function findKeyByValue(entries, value) {
-    const found = entries[value];
-    if (!found) {
-        return undefined
-    } else if (!found.skip) {
-        // matched against the real entry. 
-        return undefined
-    }
-    return found.dest
-}
-
 async function readlinkSafe(p) {
     try {
         const link = await readlink(p)
@@ -209,25 +193,26 @@ function _mtree_file_line(key, content) {
 
     // TODO: use computed_substitutions when we only support >= Bazel 7
     const entries = JSON.parse((await readFile("{{ENTRIES}}")).toString())
+    const rlookup = entries.reduce((acc, entry) => {
+        const [key, dest] = entry
+        acc[dest] = key
+        return acc
+    }, Object.create(null))
 
     const pending = []
 
     {{VARIABLES}}
 
-    for (const key in entries) {
-        const {
+    for (const entry of entries) {
+        const [
+            key,
             dest,
-            is_directory,
-            is_source,
-            is_external,
             root,
-            skip,
+            is_external,
+            is_source,
+            is_directory,
             repo_name
-        } = entries[key]
-
-        if (skip) {
-            continue
-        }
+        ] = entry
 
      	/** @type Set<string> */
         let mtree = null
@@ -266,7 +251,7 @@ function _mtree_file_line(key, content) {
             // everything except sources should have
             throw new Error(
                 `unexpected entry format. ${JSON.stringify(
-                    entries[key]
+                    entry
                 )}. please file a bug at https://github.com/aspect-build/rules_js/issues/new/choose`
             )
         }
@@ -279,7 +264,7 @@ function _mtree_file_line(key, content) {
         if (realp && !is_external) {
             const output_path = realp.slice(realp.indexOf(root))
             // Look in all entries for symlinks since they may be in other layers
-            let linkname = findKeyByValue(entries, output_path)
+            let linkname = rlookup[output_path]
 
 
             // First party dependencies are linked against a folder in output tree or source tree
