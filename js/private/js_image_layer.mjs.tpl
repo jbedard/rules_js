@@ -150,8 +150,13 @@ function add_parents(
     }
 }
 
+const NON_PRINTABLE = /[^\x20-\x7E]/
 
 function vis(str) {
+    if (!NON_PRINTABLE.test(str)) {
+        return str
+    }
+
     let result = "";
     for (const char of Buffer.from(str)) {
       if (char < 33 || char > 126) { // Non-printable
