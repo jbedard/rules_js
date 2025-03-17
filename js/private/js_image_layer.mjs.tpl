@@ -131,14 +131,15 @@ function add_parents(
 	mtree,
     dest,
 ) {
-    const segments = path.dirname(dest).split('/')
-    let prev = ''
-    for (const part of segments) {
-        if (!part) {
-            continue
+    let dir = path.dirname(dest)
+    while (dir !== "." && dir !== "/") {
+        const m = _mtree_dir_line(dir)
+        if (mtree.has(m)) {
+            break
         }
-        prev = path.join(prev, part)
-		mtree.add(_mtree_dir_line(prev))
+        
+		mtree.add(m)
+        dir = path.dirname(dir)
     }
 }
 
