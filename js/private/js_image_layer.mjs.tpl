@@ -192,7 +192,6 @@ function _mtree_file_line(key, content) {
 }
 
 
-async function split() {	
     const RUNFILES_DIR = "{{RUNFILES_DIR}}"
     const REPO_NAME = "{{REPO_NAME}}"
 
@@ -296,8 +295,3 @@ async function split() {
        {{WRITE_STATEMENTS}}
        {{CLOSE_STATEMENTS}}
     ])
-
-    
-}
-
-split()
