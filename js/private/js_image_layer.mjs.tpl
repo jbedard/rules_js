@@ -73,7 +73,7 @@ async function resolveSymlink(p) {
     }
 }
 
-async function walk(dir, cb, accumulate = '') {
+async function walk(mtree, key, dest, dir, accumulate = '') {
     const pending = []
 
     const dirents = await readdir(dir, { withFileTypes: true })
@@ -104,18 +104,28 @@ async function walk(dir, cb, accumulate = '') {
 
         if (isDirectory) {
             const p = walk(
+                mtree,
+                key,
+                dest,
                 path.join(dir, dirent.name),
-                cb,
                 path.join(accumulate, dirent.name)
             )
 
             pending.push(p)
         } else {
-            cb(path.join(accumulate, dirent.name))
+            walkCallback(mtree, key, dest, path.join(accumulate, dirent.name))
         }
     }
 
     await Promise.all(pending)
+}
+
+function walkCallback(mtree, key, dest, sub_key) {
+  const new_key = path.join(key, sub_key)
+  const new_dest = path.join(dest, sub_key)
+
+  add_parents(mtree, new_key)
+  mtree.add(_mtree_file_line(new_key, new_dest))
 }
 
 function add_parents(
@@ -225,14 +235,7 @@ function _mtree_file_line(key, content) {
 
         // its a treeartifact. expand it and add individual entries.
         if (is_directory) {
-            const p = walk(dest, function walkCallback(sub_key) {
-                const new_key = path.join(key, sub_key)
-                const new_dest = path.join(dest, sub_key)
-
-				add_parents(mtree, new_key)
-				mtree.add(_mtree_file_line(new_key, new_dest))
-            })
-            pending.push(p)
+            pending.push( walk(mtree, key, dest, dest) )
             continue
         }
 
