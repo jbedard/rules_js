@@ -53,7 +53,7 @@ const EXECROOT = process.cwd();
 
 // Resolve symlinks while staying inside the sandbox.
 async function resolveSymlink(p) {
-    let prevHop = path.resolve(p)
+    let prevHop = p
     let hopped = false
     while (true) {
         // /output-base/sandbox/4/execroot/wksp/bazel-out
