@@ -298,6 +298,7 @@ def _run_splitter(ctx, runfiles_dir, files, entries_json, layer_groups, launcher
     VARIABLES = ""
     PICK_STATEMENTS = ""
     WRITE_STATEMENTS = ""
+    CLOSE_STATEMENTS = ""
 
     splitter_outputs = []
     expected_layer_groups = []
@@ -334,6 +335,7 @@ def _run_splitter(ctx, runfiles_dir, files, entries_json, layer_groups, launcher
             ]),
         )
 
+        CLOSE_STATEMENTS += """new Promise((resolve) => %sunusedinputs.end(resolve)),\n""" % name
         WRITE_STATEMENTS += """writeFile("%s", Array.from(%smtree).sort().concat([""]).join("\\n")),\n""" % (mtree.path, name)
 
         expected_layer_groups.append((name, mtree, unused_inputs))
@@ -352,6 +354,7 @@ def _run_splitter(ctx, runfiles_dir, files, entries_json, layer_groups, launcher
             "{{VARIABLES}}": VARIABLES,
             "{{PICK_STATEMENTS}}": PICK_STATEMENTS,
             "{{WRITE_STATEMENTS}}": WRITE_STATEMENTS,
+            "{{CLOSE_STATEMENTS}}": CLOSE_STATEMENTS,
         },
     )
 

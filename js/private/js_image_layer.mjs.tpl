@@ -361,6 +361,7 @@ async function split() {
 
     await Promise.all([
        {{WRITE_STATEMENTS}}
+       {{CLOSE_STATEMENTS}}
     ])
 
     
