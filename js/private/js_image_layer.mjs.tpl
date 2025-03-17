@@ -2,12 +2,6 @@ import { readdir, readFile, readlink, writeFile } from 'node:fs/promises'
 import { createWriteStream, link } from "node:fs"
 import * as path from 'node:path'
 
-const MTIME = "0"
-const MODE_FOR_DIR = "0755"
-const MODE_FOR_FILE = "0555"
-const MODE_FOR_SYMLINK = "0775"
-
-
 /**
  * @typedef {{
  *	 is_source: boolean
@@ -136,8 +130,6 @@ async function* walk(dir, accumulate = '') {
 function add_parents(
 	mtree,
     dest,
-    uid, 
-	gid,
 ) {
     const segments = path.dirname(dest).split('/')
     let prev = ''
@@ -146,16 +138,7 @@ function add_parents(
             continue
         }
         prev = path.join(prev, part)
-		mtree.add(_mtree_line(
-			prev,
-			"dir",
-			uid,
-			gid,
-			MTIME,
-			// this is an intermediate directory and bazel does not allow specifying
-        	// the file mode for intermediate directories so we use a static mode.
-			MODE_FOR_DIR,
-		))
+		mtree.add(_mtree_dir_line(prev))
     }
 }
 
@@ -172,54 +155,43 @@ function vis(str) {
     return result;
 }
 
-function normalize(dest) {
-    if (!dest.startsWith(".")) {
-        if (!dest.startsWith("/")) {
-            dest = "/" + dest;
-        }
-        dest = "." + dest;
+function _mtree_path_pre(p) {
+    // mtree expects paths to start with ./ so normalize paths that starts with
+    // `/` or relative path (without / and ./)
+    switch (p.charAt(0)) {
+        case '.': return ''
+        case '/': return '.'
+        default:  return './'
     }
-
-    return vis(dest)
 }
 
-function _mtree_line(
-	dest,
-	type,
-	uid,
-	gid,
-	time,
-	mode,
-	content = null,
-	link = null,
-  ) {
-	// mtree expects paths to start with ./ so normalize paths that starts with
-	// `/` or relative path (without / and ./)
-	dest = normalize(dest)
+function _mtree_dir_line(dir) {
+    const pre = _mtree_path_pre(dir)
+    const dest = vis(dir)
   
-	const spec = [
-	  dest,
-	  "uid=" + uid,
-	  "gid=" + gid,
-	  "time=" + time,
-	  "mode=" + mode,
-	  "type=" + type,
-	];
-	if (content) {
-	  spec.push("content=" + vis(content));
-	}
-	if (type == "link") {
-        link = normalize(link)
-		const link_parent = path.dirname(dest)
-		spec.push("link=" + path.relative(link_parent, link));
-	}
-	return spec.join(" ");
-  }
+    return `${pre}${dest} uid={{UID}} gid={{GID}} time={{MTIME}} mode={{MODE_FOR_DIR}} type=dir`;
+}
+
+function _mtree_link_line(key, linkname) {
+    const pre = _mtree_path_pre(key)
+    const dest = vis(key)
+    const link = vis(linkname)
+
+    const link_parent = path.dirname(dest)
+    const link_rel = path.relative(link_parent, link)
+
+    return `${pre}${dest} uid={{UID}} gid={{GID}} time={{MTIME}} mode={{MODE_FOR_SYMLINK}} type=link link=${link_rel}`;
+}
+
+function _mtree_file_line(key, content) {
+    const pre = _mtree_path_pre(key)
+    const dest = vis(key)
+  
+    return `${pre}${dest} uid={{UID}} gid={{GID}} time={{MTIME}} mode={{MODE_FOR_FILE}} type=file content=${vis(content)}`;
+}
 
 
 async function split() {	
-    const UID = "{{UID}}"
-    const GID = "{{GID}}"
     const RUNFILES_DIR = "{{RUNFILES_DIR}}"
     const REPO_NAME = "{{REPO_NAME}}"
 
@@ -258,34 +230,18 @@ async function split() {
                 const new_key = path.join(key, sub_key)
                 const new_dest = path.join(dest, sub_key)
 
-				add_parents(mtree, new_key, UID, GID)
-				mtree.add(_mtree_line(
-					new_key,
-					"file",
-					UID,
-					GID,
-					MTIME,
-					MODE_FOR_FILE,
-					new_dest
-				))
+				add_parents(mtree, new_key)
+				mtree.add(_mtree_file_line(new_key, new_dest))
             }
             continue
         }
 
         // create parents of current path.
-        add_parents(mtree, key, UID, GID)
+        add_parents(mtree, key)
 
         // A source file from workspace, not an output of a target.
         if (is_source) {
-			mtree.add(_mtree_line(
-				key,
-				"file",
-				UID,
-				GID,
-				MTIME,
-				MODE_FOR_FILE,
-				dest
-			))
+			mtree.add(_mtree_file_line(key, dest))
             continue
         }
 
@@ -329,33 +285,9 @@ async function split() {
                 )
             }
             
-			mtree.add(_mtree_line(
-				key,
-				"link",
-				UID,
-				GID,
-				MTIME,
-				// interestingly, bazel 5 and 6 sets different mode bits on symlinks.
-				// well use `0o755` to allow owner&group to `rwx` and others `rx`
-				// see: https://chmodcommand.com/chmod-775/
-				MODE_FOR_SYMLINK,
-				null,
-				linkname
-			))
+			mtree.add(_mtree_link_line(key, linkname))
         } else {
-            mtree.add(_mtree_line(
-				key,
-				"file",
-				UID,
-				GID,
-				MTIME,
-                // Due to filesystems setting different bits depending on the os we have to opt-in
-                // to use a stable mode for files.
-                // In the future, we might want to hand off fine-grained control of these to users
-                // see: https://chmodcommand.com/chmod-0555/
-				MODE_FOR_FILE,
-				dest
-			))
+            mtree.add(_mtree_file_line(key, dest))
         }
     }
 

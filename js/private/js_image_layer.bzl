@@ -290,6 +290,24 @@ def _write_laucher(ctx, real_binary):
     )
     return launcher
 
+# Due to filesystems setting different bits depending on the os we have to opt-in
+# to use a stable mode for files.
+# In the future, we might want to hand off fine-grained control of these to users
+# see: https://chmodcommand.com/chmod-0555/
+MODE_FOR_FILE = "0555"
+
+# this is an intermediate directory and bazel does not allow specifying
+# the file mode for intermediate directories so we use a static mode.
+MODE_FOR_DIR = "0755"
+
+# interestingly, bazel 5 and 6 sets different mode bits on symlinks.
+# well use `0o755` to allow owner&group to `rwx` and others `rx`
+# see: https://chmodcommand.com/chmod-775/
+MODE_FOR_SYMLINK = "0775"
+
+# Modification time for all files/dirs/symlinks.
+MTIME = "0"
+
 def _run_splitter(ctx, runfiles_dir, files, entries_json, layer_groups, launcher, repo_mapping = None):
     ownersplit = ctx.attr.owner.split(":")
     if len(ownersplit) != 2 or not ownersplit[0].isdigit() or not ownersplit[1].isdigit():
@@ -346,6 +364,10 @@ def _run_splitter(ctx, runfiles_dir, files, entries_json, layer_groups, launcher
         output = splitter,
         is_executable = True,
         substitutions = {
+            "{{MODE_FOR_FILE}}": MODE_FOR_FILE,
+            "{{MODE_FOR_DIR}}": MODE_FOR_DIR,
+            "{{MODE_FOR_SYMLINK}}": MODE_FOR_SYMLINK,
+            "{{MTIME}}": MTIME,
             "{{UID}}": ownersplit[0],
             "{{GID}}": ownersplit[1],
             "{{RUNFILES_DIR}}": runfiles_dir,
