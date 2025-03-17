@@ -328,7 +328,7 @@ def _run_splitter(ctx, runfiles_dir, files, entries_json, layer_groups, launcher
             IF_STMT,
             name,
             "\n".join([
-                '    %sunusedinputs.write(dest + "\\n");' % oname
+                "    %sunusedinputs.write(destBuf);" % oname
                 for oname in layer_groups.keys()
                 if oname != name
             ]),

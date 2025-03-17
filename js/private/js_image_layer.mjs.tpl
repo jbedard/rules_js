@@ -245,6 +245,8 @@ async function split() {
 
      	/** @type Set<string> */
         let mtree = null
+
+        const destBuf = Buffer.from(dest + "\n")
         
 
         {{PICK_STATEMENTS}}
