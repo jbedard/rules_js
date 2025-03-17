@@ -295,3 +295,5 @@ function _mtree_file_line(key, content) {
        {{WRITE_STATEMENTS}}
        {{CLOSE_STATEMENTS}}
     ])
+
+    process.exit(0)
