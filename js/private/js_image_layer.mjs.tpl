@@ -36,8 +36,8 @@ async function readlinkSafe(p) {
 const EXECROOT = process.cwd();
 
 // Resolve symlinks while staying inside the sandbox.
-async function resolveSymlink(p) {
-    let prevHop = p
+async function resolveSymlink(mtree, entry, dest) {
+    let prevHop = dest
     let hopped = false
     while (true) {
         // /output-base/sandbox/4/execroot/wksp/bazel-out
@@ -47,7 +47,7 @@ async function resolveSymlink(p) {
         // we hopped too far, return the previous hop.
 
         if (!nextHop.startsWith(EXECROOT)) {
-            return hopped ? prevHop : undefined
+            return resolveSymlinkResolved(mtree, entry, hopped ? prevHop : undefined)
         }
 
         // If there is more than one hop while staying inside sandbox
@@ -57,7 +57,7 @@ async function resolveSymlink(p) {
         //      -> ../../../../../../node_modules/.aspect_rules_js/@mycorp+pkg-d@0.0.0/node_modules/@mycorp/pkg-d    <- WE WANT TO STOP RIGHT HERE.
         //          -> ../../../../../../examples/npm_package/packages/pkg_d
         if (nextHop != prevHop && hopped) {
-            return prevHop
+            return resolveSymlinkResolved(mtree, entry, prevHop)
         }
 
         // if the next hop is leads to a different path
@@ -66,9 +66,9 @@ async function resolveSymlink(p) {
             prevHop = nextHop
             hopped = true
         } else if (!hopped) {
-            return undefined
+            return resolveSymlinkResolved(mtree, entry, undefined)
         } else {
-            return nextHop
+            return resolveSymlinkResolved(mtree, entry, nextHop)
         }
     }
 }
@@ -219,10 +219,10 @@ function _mtree_file_line(key, content) {
             key,
             dest,
             root,
-            is_external,
+            /*is_external*/,
             is_source,
             is_directory,
-            repo_name
+            /*repo_name*/
         ] = entry
 
      	/** @type Set<string> */
@@ -259,9 +259,18 @@ function _mtree_file_line(key, content) {
             )
         }
 
-        pending.push( resolveSymlink(dest).then(splitResolveSymlinkCallback) )
+        pending.push(resolveSymlink(mtree, entry, dest))
+    }
 
-    function splitResolveSymlinkCallback(realp) {
+    function resolveSymlinkResolved(mtree, entry, realp) {
+        const [
+            key,
+            dest,
+            root,
+            is_external,
+            repo_name
+        ] = entry
+
         // it's important that we don't treat any symlink pointing out of execroot since
         // bazel symlinks external files into sandbox to make them available to us.
         if (realp && !is_external) {
@@ -294,8 +303,6 @@ function _mtree_file_line(key, content) {
         } else {
             mtree.add(_mtree_file_line(key, dest))
         }
-    }
-
     }
 
     await Promise.all(pending)
