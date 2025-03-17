@@ -1,5 +1,5 @@
-import { readdir, readFile, readlink, writeFile } from 'node:fs/promises'
-import { createWriteStream, link } from "node:fs"
+import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { createWriteStream, readlink, link } from "node:fs"
 import * as path from 'node:path'
 
 /**
@@ -16,33 +16,34 @@ import * as path from 'node:path'
  * @typedef {Map<string, {match: RegExp, unused_inputs: string, mtree: string }>} LayerGroup
  */
 
-async function readlinkSafe(p) {
-    try {
-        const link = await readlink(p)
-        return path.resolve(path.dirname(p), link)
-    } catch (e) {
+function readlinkSafe(p, cb) {
+    return readlink(p, function readlinkSafeCallback(e, link) {
+        if (!e) {
+            return cb(null, path.resolve(path.dirname(p), link))
+        }
         if (e.code == 'EINVAL') {
-            return p
+            return cb(null, p)
         }
         if (e.code == 'ENOENT') {
             // That is as far as we can follow this symlink in this layer so we can only
             // assume the file exists in another layer
-            return p
+            return cb(null, p)
         }
-        throw e
-    }
+        cb(e)
+    })
 }
 
 const EXECROOT = process.cwd();
 
 // Resolve symlinks while staying inside the sandbox.
-async function resolveSymlink(mtree, entry, dest) {
-    let prevHop = dest
-    let hopped = false
-    while (true) {
-        // /output-base/sandbox/4/execroot/wksp/bazel-out
-        // /output-base/execroot/wksp/bazel-out
-        let nextHop = await readlinkSafe(prevHop)
+function resolveSymlink(mtree, entry, prevHop, hopped) {
+    resolving++
+
+    // /output-base/sandbox/4/execroot/wksp/bazel-out
+    // /output-base/execroot/wksp/bazel-out
+    return readlinkSafe(prevHop, function resolveSymlinkSafeCallback(e, nextHop) {
+        resolving--
+
         // if the next hop leads to out of execroot, that means
         // we hopped too far, return the previous hop.
 
@@ -63,14 +64,13 @@ async function resolveSymlink(mtree, entry, dest) {
         // if the next hop is leads to a different path
         // that indicates a symlink 
         if (nextHop != prevHop && !hopped) {
-            prevHop = nextHop
-            hopped = true
+            return resolveSymlink(mtree, entry, nextHop, true)
         } else if (!hopped) {
             return resolveSymlinkResolved(mtree, entry, undefined)
         } else {
             return resolveSymlinkResolved(mtree, entry, nextHop)
         }
-    }
+    })
 }
 
 async function walk(mtree, key, dest, dir, accumulate = '') {
@@ -211,6 +211,7 @@ function _mtree_file_line(key, content) {
     }, Object.create(null))
 
     const pending = []
+    let resolving = 0
 
     {{VARIABLES}}
 
@@ -259,7 +260,7 @@ function _mtree_file_line(key, content) {
             )
         }
 
-        pending.push(resolveSymlink(mtree, entry, dest))
+        resolveSymlink(mtree, entry, dest)
     }
 
     function resolveSymlinkResolved(mtree, entry, realp) {
@@ -304,6 +305,14 @@ function _mtree_file_line(key, content) {
             mtree.add(_mtree_file_line(key, dest))
         }
     }
+
+    pending.push(new Promise(function resolvingWait(resolve) {
+        if (resolving <= 0) {
+            return resolve()
+        } else {
+            setTimeout(() => resolvingWait(resolve))
+        }
+    }))
 
     await Promise.all(pending)
 
