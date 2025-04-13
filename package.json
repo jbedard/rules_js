@@ -8,6 +8,10 @@
         "typescript": "4.9.5"
     },
     "pnpm": {
+        "onlyBuiltDependencies": [
+            "@figma/nodegit",
+            "fsevents"
+        ],
         "packageExtensions": {
             "mocha": {
                 "peerDependencies": {
