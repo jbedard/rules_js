@@ -1,0 +1,24 @@
+"""JavaScript and npm toolchain configuration."""
+
+module(
+    name = "rules_foo",
+    version = "0.0.1",
+)
+
+bazel_dep(name = "aspect_rules_js", version = "0.0.0")
+local_path_override(
+    module_name = "aspect_rules_js",
+    path = "../../../..",
+)
+
+# Configure npm extension for codegen tools (OpenAPI TypeScript)
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "npm",
+    data = [
+        "//:package.json",
+    ],
+    pnpm_lock = "//:pnpm-lock.yaml",
+    verify_node_modules_ignored = "//:.bazelignore",
+)
+use_repo(npm, "npm")

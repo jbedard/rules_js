@@ -1,0 +1,11 @@
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//:openapi-typescript/package_json.bzl", openapi_ts_bin = "bin")
+
+package(default_visibility = ["//visibility:public"])
+
+npm_link_all_packages()
+
+openapi_ts_bin.openapi_typescript_binary(
+    name = "openapi_typescript_cli",
+    visibility = ["//visibility:public"],
+)

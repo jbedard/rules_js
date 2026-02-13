@@ -1,0 +1,8 @@
+# TODO: non-linux?
+# common --strategy=linux-sandbox
+# build --spawn_strategy=linux-sandbox
+
+common --incompatible_python_disallow_native_rules
+common --incompatible_use_python_toolchains
+
+common --incompatible_strict_action_env

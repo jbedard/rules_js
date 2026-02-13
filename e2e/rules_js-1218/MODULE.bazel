@@ -1,0 +1,11 @@
+bazel_dep(name = "aspect_rules_js", version = "0.0.0")
+local_path_override(
+    module_name = "aspect_rules_js",
+    path = "../..",
+)
+
+bazel_dep(name = "rules_foo", version = "0.0.1")
+local_path_override(
+    module_name = "rules_foo",
+    path = "other-modules/rules_foo",
+)

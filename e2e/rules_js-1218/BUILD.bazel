@@ -1,0 +1,5 @@
+load("@rules_foo//:defs.bzl", "thing_codegen")
+
+thing_codegen(
+    name = "repro",
+)

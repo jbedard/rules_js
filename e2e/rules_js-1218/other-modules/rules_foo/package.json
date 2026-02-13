@@ -1,0 +1,14 @@
+{
+    "name": "@our-thing/build-tools",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Build-time npm dependencies for Bazel codegen",
+    "dependencies": {
+        "openapi-fetch": "^0.15.0",
+        "openapi-typescript": "^7.10.1",
+        "typescript": "^5.7.2"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": []
+    }
+}
