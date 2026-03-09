@@ -27,9 +27,25 @@ if bazel run @npm//:sync; then
     exit 1
 fi
 
+# Stage pnpm-lock.yaml so we can detect if the second sync modifies it again
+git add pnpm-lock.yaml
+
 # The lockfile has been updated and sync should now exit 0
-if ! bazel run @npm//:sync; then
+if bazel run @npm//:sync; then
     echo "ERROR: expected 'update_pnpm_lock' to exit zero once the lockfile is up to date"
+    exit 1
+fi
+
+# Verify the second sync updated .aspect/* but did NOT update pnpm-lock.yaml
+if ! git status --porcelain | grep -q "\.aspect/rules/external_repository_action_cache/npm_translate_lock_"; then
+    echo "ERROR: expected .aspect/rules/external_repository_action_cache/npm_translate_lock_* to be updated by second sync"
+    git status
+    exit 1
+fi
+
+if git diff pnpm-lock.yaml | grep -q .; then
+    echo "ERROR: expected pnpm-lock.yaml to NOT be updated by second sync"
+    git diff pnpm-lock.yaml
     exit 1
 fi
 
