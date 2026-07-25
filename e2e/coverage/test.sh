@@ -26,8 +26,12 @@ set -o errexit -o nounset -o pipefail
 # Coverage is checked in two configurations:
 #   inline  the _lcov_merger runs inside the test action.
 #   split   the _lcov_merger runs as its own action, without the test's runfiles
-#           (--experimental_split_coverage_postprocessing, implied by remote
-#           execution) — the configuration from #2901.
+#           (--experimental_split_coverage_postprocessing + also
+#           --experimental_fetch_all_coverage_outputs, implied by remote
+#           execution) — the configuration from #2901. This split run also covers
+#           #965: the merger is pure bash reading COVERAGE_DIR, so it needs no
+#           runfiles and can't hit the "entry_point ... not found in runfiles"
+#           failure that motivated #965.
 
 readonly WORKING_TARGETS=(test first_party_jslib_test)
 readonly KNOWN_BROKEN_TARGETS=(first_party_npmpkg_test)

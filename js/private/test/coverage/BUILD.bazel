@@ -4,22 +4,16 @@ load(":test.bzl", "coverage_expected_exit_test", "coverage_fail_test", "coverage
 package(default_testonly = True)
 
 # coverage_fail_test has no _coverage_report, so the test action stashes nothing.
-# publish.js must then leave the empty COVERAGE_OUTPUT_FILE bazel created in place.
-FAIL_CMD = """\
-cat $(location //js/private/coverage:publish.js) >> $@
-echo "process.on('exit', () => require('assert').equal(require('fs').readFileSync(process.env.COVERAGE_OUTPUT_FILE).toString(), ''))" >> $@
-"""
-
-genrule(
-    name = "fail_merger_entrypoint",
-    srcs = ["//js/private/coverage:publish.js"],
-    outs = ["fail_merger_entrypoint.js"],
-    cmd = FAIL_CMD,
-)
-
+# The merger must then leave the empty COVERAGE_OUTPUT_FILE bazel created in place.
 coverage_merger(
     name = "fail_merger",
-    entry_point = ":fail_merger_entrypoint.js",
+    merge_assertions = """\
+if [ -s "$COVERAGE_OUTPUT_FILE" ]; then
+    echo "expected empty coverage output, got:" >&2
+    cat "$COVERAGE_OUTPUT_FILE" >&2
+    exit 1
+fi
+""",
     visibility = ["//visibility:public"],
 )
 
@@ -33,23 +27,15 @@ coverage_fail_test(
     entry_point = "lib.js",
 )
 
-# coverage_pass_test generates + stashes the report in the test action; publish.js
+# coverage_pass_test generates + stashes the report in the test action; the merger
 # moves it to COVERAGE_OUTPUT_FILE, which must then hold the real lcov report.
-PASS_CMD = """\
-cat $(location //js/private/coverage:publish.js) >> $@
-echo "process.on('exit', () => { const a = require('assert'); const r = require('fs').readFileSync(process.env.COVERAGE_OUTPUT_FILE).toString(); a.equal(r.split('\\n')[1], 'SF:js/private/test/coverage/lib.js'); a.ok(/^DA:\\d+,[1-9]/m.test(r), 'expected an executed line'); a.ok(/^DA:\\d+,0/m.test(r), 'expected an unexecuted line'); })" >> $@
-"""
-
-genrule(
-    name = "pass_merger_entrypoint",
-    srcs = ["//js/private/coverage:publish.js"],
-    outs = ["pass_merger_entrypoint.js"],
-    cmd = PASS_CMD,
-)
-
 coverage_merger(
     name = "pass_merger",
-    entry_point = ":pass_merger_entrypoint.js",
+    merge_assertions = """\
+grep -q '^SF:js/private/test/coverage/lib.js$' "$COVERAGE_OUTPUT_FILE" || { echo "expected SF:.../lib.js" >&2; exit 1; }
+grep -Eq '^DA:[0-9]+,[1-9]' "$COVERAGE_OUTPUT_FILE" || { echo "expected an executed line" >&2; exit 1; }
+grep -Eq '^DA:[0-9]+,0' "$COVERAGE_OUTPUT_FILE" || { echo "expected an unexecuted line" >&2; exit 1; }
+""",
     visibility = ["//visibility:public"],
 )
 
@@ -65,21 +51,12 @@ coverage_pass_test(
 
 # Asserts real coverage without pinning the SF: path, so it works for any covered
 # source. Used by the expected_exit_code regression test.
-REAL_COVERAGE_CMD = """\
-cat $(location //js/private/coverage:publish.js) >> $@
-echo "process.on('exit', () => { const a = require('assert'); const r = require('fs').readFileSync(process.env.COVERAGE_OUTPUT_FILE).toString(); a.ok(/^DA:\\d+,[1-9]/m.test(r), 'expected an executed line'); a.ok(/^DA:\\d+,0/m.test(r), 'expected an unexecuted line'); })" >> $@
-"""
-
-genrule(
-    name = "real_coverage_merger_entrypoint",
-    srcs = ["//js/private/coverage:publish.js"],
-    outs = ["real_coverage_merger_entrypoint.js"],
-    cmd = REAL_COVERAGE_CMD,
-)
-
 coverage_merger(
     name = "real_coverage_merger",
-    entry_point = ":real_coverage_merger_entrypoint.js",
+    merge_assertions = """\
+grep -Eq '^DA:[0-9]+,[1-9]' "$COVERAGE_OUTPUT_FILE" || { echo "expected an executed line" >&2; exit 1; }
+grep -Eq '^DA:[0-9]+,0' "$COVERAGE_OUTPUT_FILE" || { echo "expected an unexecuted line" >&2; exit 1; }
+""",
     visibility = ["//visibility:public"],
 )
 

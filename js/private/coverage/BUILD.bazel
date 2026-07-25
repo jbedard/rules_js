@@ -4,7 +4,6 @@ load(":merger.bzl", "coverage_merger")
 exports_files([
     "coverage.sh.tpl",
     "coverage.js",
-    "publish.js",
 ])
 
 write_source_files(
